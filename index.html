@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>臺灣華語</title>
+<meta name="description" content="從桃園出發，逆時針環遊臺灣 22 個縣市，挑戰語言道館、和訓練家對戰、馴養動物，用遊戲學習臺灣華語。">
+<meta name="theme-color" content="#1b2340">
+<meta property="og:type" content="website">
+<meta property="og:title" content="臺灣華語 Taiwan Mandarin">
+<meta property="og:description" content="從桃園出發，逆時針環遊臺灣 22 個縣市，挑戰語言道館、和訓練家對戰、馴養動物，用遊戲學習臺灣華語。">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/assets/style.ebfa3b42db.css">
+</head>
+<body>
+<div class="app" id="app">
+  <canvas id="map" aria-label="遊戲地圖 Game map"></canvas>
+  <div class="hud" id="hud" hidden>
+    <div class="card me">
+      <div class="nm"><span id="hName"></span><span class="lv" id="hLv">Lv 1</span></div>
+      <span class="lbl" id="hFatL"></span><div class="bar st" id="hFatBar"><i id="hFat"></i></div>
+      <span class="num" id="hFatN"></span>
+      <span class="lbl">EXP</span><div class="bar xp"><i id="hXp"></i></div>
+    </div>
+    <div class="side">
+      <div class="card pill"><span id="hMoney">NT$0</span><span id="hBadge">★0</span></div>
+      <div class="btnrow"><button class="hbtn" id="rubyBtn"></button><button class="hbtn go" id="menuBtn"></button></div>
+    </div>
+  </div>
+  <div class="card cityTag" id="cityTag" style="opacity:0"></div>
+  <div class="card dlg" id="dlg" hidden role="status"></div>
+  <div class="keys" id="keys">←↑↓→ / WASD · Z / Enter = A · X / Esc = B</div>
+  <div class="pad" id="pad">
+    <div class="dpad"><button class="u" data-dir="up" aria-label="up">▲</button><button class="l" data-dir="left" aria-label="left">◀</button><button class="r" data-dir="right" aria-label="right">▶</button><button class="d" data-dir="down" aria-label="down">▼</button></div>
+    <div class="abs"><button class="b" id="bBtn" aria-label="B">B</button><button class="a" id="aBtn" aria-label="A">A</button></div>
+  </div>
+</div>
+<div class="ov" id="ov" hidden><div class="panel" id="panel"></div></div>
+<div class="toast" id="toast" hidden></div>
+<noscript><p style="padding:24px;font-family:sans-serif">這個遊戲需要開啟 JavaScript。Please enable JavaScript to play.</p></noscript>
+<script src="/assets/app.c1c4cd117c.js"></script>
+</body>
+</html>

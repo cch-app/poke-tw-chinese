@@ -1,0 +1,10 @@
+{
+  "name": "臺灣華語 Taiwan Mandarin",
+  "short_name": "臺灣華語",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b2340",
+  "theme_color": "#1b2340",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
