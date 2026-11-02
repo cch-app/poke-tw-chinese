@@ -58,10 +58,10 @@ function dexMenu(){const n=Object.keys(S.seen).length;openPanel(head('dex',backB
 function settingsMenu(){const st=S.settings;
  const vs=twVoices.map(v=>`<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.voice?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('');
  openPanel(head('settings',backBtn())+`<div class="pbody">
- <div class="field">${Z('ruby')} <span class="tl">${T('ruby')}</span><span class="seg">${['pinyin','zhuyin','off'].map(k=>`<button data-ruby="${k}" aria-pressed="${st.ruby===k}">${Z(k)}</button>`).join('')}</span></div>
- <div class="field">${Z('lang')} <span class="tl">${T('lang')}</span><span class="seg"><button data-lang="en" aria-pressed="${st.lang==='en'}">English</button><button data-lang="ja" aria-pressed="${st.lang==='ja'}">日本語</button></span></div>
- <label class="field" for="voiceSel">${Z('voice')} <span class="tl">${T('voice')}</span>${vs?`<select id="voiceSel">${vs}</select>`:`<span class="note">${Z('noVoice')}<br>${T('noVoice')}</span>`}</label>
- <label class="field" for="rateSel">${Z('speed')} <span class="tl">${T('speed')}</span><select id="rateSel">${[.7,.8,.9,1].map(v=>`<option value="${v}" ${st.rate==v?'selected':''}>${v}×</option>`).join('')}</select></label>
+ <div class="field"><span class="flbl">${Z('ruby')} <span class="tl">${T('ruby')}</span></span><span class="seg">${['pinyin','zhuyin','off'].map(k=>`<button data-ruby="${k}" aria-pressed="${st.ruby===k}">${Z(k)}</button>`).join('')}</span></div>
+ <div class="field"><span class="flbl">${Z('lang')} <span class="tl">${T('lang')}</span></span><span class="seg"><button data-lang="en" aria-pressed="${st.lang==='en'}">English</button><button data-lang="ja" aria-pressed="${st.lang==='ja'}">日本語</button></span></div>
+ <label class="field" for="voiceSel"><span class="flbl">${Z('voice')} <span class="tl">${T('voice')}</span></span>${vs?`<select id="voiceSel">${vs}</select>`:`<span class="note">${Z('noVoice')}<br>${T('noVoice')}</span>`}</label>
+ <label class="field" for="rateSel"><span class="flbl">${Z('speed')} <span class="tl">${T('speed')}</span></span><select id="rateSel">${[.7,.8,.9,1].map(v=>`<option value="${v}" ${st.rate==v?'selected':''}>${v}×</option>`).join('')}</select></label>
  ${vs?`<div class="row"><button class="btn alt" id="testV">▶ ${rb('你好，歡迎來到臺灣！')}</button></div>`:''}
  <div class="row">${btn('resetBtn','reset','alt')}<span class="note" id="resetNote"></span></div></div>`);wireBack();
  $('#panel').querySelectorAll('[data-ruby]').forEach(b=>b.onclick=()=>{st.ruby=b.dataset.ruby;save();refreshView();hud();settingsMenu()});
