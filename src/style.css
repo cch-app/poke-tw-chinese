@@ -219,3 +219,4 @@ input::placeholder{color:#8a93ad;-webkit-text-fill-color:#8a93ad}
 #nickIn{width:100%;box-sizing:border-box}
 .toast.top{top:calc(14px + env(safe-area-inset-top,0px))!important;bottom:auto!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.bootErr{position:fixed;inset:auto 16px 16px;padding:16px;border-radius:12px;background:#fff;color:#1b2340;font:700 15px/1.6 sans-serif;text-align:center}
