@@ -24,11 +24,11 @@ export function startBattle(foe){B={foe,cut:has('cat')?1+Math.floor((petLv('cat'
 // 對戰場景用一般的顏色畫，再交給 renderPixel 收成掌機四色（每 3 個 CSS 像素一點）
 function drawArena(){const c=$('#arenaCv');if(!c||!B)return;renderPixel(c,c.clientWidth,c.clientHeight,Math.min(2,window.devicePixelRatio||1),3,arenaScene)}
 function arenaScene(g,w,h){
- const city=CITIES[S.city];g.fillStyle=lg(g,0,0,0,h,['#9fd6ff','#e8f6ff']);g.fillRect(0,0,w,h);
+ const city=CITIES[S.city];g.fillStyle=lg(g,0,0,0,h,['#7cc6f0','#e6eaf2']);g.fillRect(0,0,w,h);
  g.fillStyle=shade(city.roof,.55);g.beginPath();g.moveTo(0,h*.55);for(let x=0;x<=w;x+=w/8)g.lineTo(x,h*.42+Math.sin(x*.02)*h*.06);g.lineTo(w,h);g.lineTo(0,h);g.fill();
- g.fillStyle=lg(g,0,h*.55,0,h,['#9fdc7a','#6cbf55']);g.fillRect(0,h*.6,w,h*.4);
- ell(g,w*.72,h*.58,Math.min(w*.2,170),h*.09);g.fillStyle='#7ccb62';g.fill();g.lineWidth=3;g.strokeStyle='rgba(27,35,64,.35)';g.stroke();
- ell(g,w*.24,h*1.02,Math.min(w*.22,190),h*.1);g.fillStyle='#7ccb62';g.fill();g.stroke();
+ g.fillStyle=lg(g,0,h*.55,0,h,['#8bd36b','#4fae54']);g.fillRect(0,h*.6,w,h*.4);
+ ell(g,w*.72,h*.58,Math.min(w*.2,170),h*.09);g.fillStyle='#8bd36b';g.fill();g.lineWidth=3;g.strokeStyle='rgba(27,35,64,.35)';g.stroke();
+ ell(g,w*.24,h*1.02,Math.min(w*.22,190),h*.1);g.fillStyle='#8bd36b';g.fill();g.stroke();
  const s=Math.min(h*.42,w*.26);
  if(B.foe.kind==='person')drawChar(g,w*.72,h*.6,s,B.foe.look,'down',0,true);else drawAnimal(g,B.foe.kind,w*.72,h*.61,s*1.1);
  drawChar(g,w*.2,h*1.22,s*1.05,playerLook(),'up',0,true)}

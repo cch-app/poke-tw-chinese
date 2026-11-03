@@ -5,12 +5,12 @@ import {
   OUT, GT, BLD, FEX, rr, mkc, paintInterior,
   spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, drawChar, emblemImage,
 } from '../art.js';
-import { PALETTE, pixelGround, pixelMaker as px } from '../render/pixel.js';
+import { COLORS, pixelGround, pixelMaker as px } from '../render/pixel.js';
 import { paintPixelTown, tallGrass } from '../art/pixel-tiles.js';
 
 // 美術一格 16 點；畫面上的格子取 16 的倍數，像素才會整齊
 const tileStep = (v, a, b) => Math.max(a, Math.min(b, Math.round(v / 16) * 16));
-const BG_TOWN = PALETTE[2], BG_IN = PALETTE[3];
+const BG_TOWN = COLORS.green[1], BG_IN = COLORS.ink[0];
 
 /* ---------- 徽章圖（SVG 載入完要重畫道館） ---------- */
 const emblems = [];
@@ -43,7 +43,7 @@ const makeArch = px((_, u, dpr) => spriteArch(u, dpr, cur.city));
 const makeFurn = px((f, u, dpr) => spriteFurn(f, cur.map.bk, u, dpr, cur.city));
 const makeGrass = px((_, u, dpr) => { const c = mkc(u, u, dpr); tallGrass(c.getContext('2d'), 0, 0, true); return c });
 const makeShimmer = (_, u, dpr) => { const c = mkc(u * .34, u * .08, dpr), g = c.getContext('2d');
-  g.strokeStyle = PALETTE[0]; g.lineWidth = u * .04; g.lineCap = 'round'; g.beginPath(); g.moveTo(u * .02, u * .04); g.lineTo(u * .32, u * .04); g.stroke(); return c };
+  g.strokeStyle = COLORS.blue[3]; g.lineWidth = u * .04; g.lineCap = 'round'; g.beginPath(); g.moveTo(u * .02, u * .04); g.lineTo(u * .32, u * .04); g.stroke(); return c };
 const makeBubble = px((_, u, dpr) => { const c = mkc(u * .5, u * .54, dpr), g = c.getContext('2d'), m = u * .05;
   rr(g, m, m, u * .4, u * .44, u * .12); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OUT; g.stroke();
   g.fillStyle = '#ff5b4a'; g.font = `900 ${u * .36}px sans-serif`; g.textAlign = 'center'; g.fillText('!', m + u * .2, m + u * .34); return c });
@@ -65,7 +65,7 @@ function charSprite(look, dir, step) {
   return a.v[i] || (a.v[i] = { key: `char-${a.id}-${dir}${step}`, look, dir, step });
 }
 const makeChar = px((c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr);
-  drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv }, { adaptive: true });
+  drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv });
 function drawActor(v, tx, ty, look, dir, step, depth) {
   const U = v.U, s = U * 1.05, w = s * 1.4, top = s * 1.75, c = charSprite(look, dir, step);
   v.sprite(c.key, makeChar, c, (tx + .5) * U - w / 2, (ty + 1) * U - U * .06 - top, w, top + s * .1, depth);

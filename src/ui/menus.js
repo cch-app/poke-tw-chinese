@@ -22,14 +22,14 @@ export async function mainMenu(){if(mode!=='world')return;const keys=['map','par
  if(keys[i]==='save'){save();return say([UI.savedLong])}
  ({map:mapMenu,party:partyMenu,bag:bagMenu,badges:badgeMenu,dex:dexMenu,settings:settingsMenu})[keys[i]]()}
 function mapMenu(){const open=ci=>ci<=Math.min(S.badges,21);
- let svg=`<svg class="mapsvg" viewBox="-32 -8 134 172" role="img" aria-label="Taiwan map"><rect x="-32" y="-8" width="134" height="172" rx="8" fill="#9cc27a"/>
- <polygon points="${TW_PTS}" fill="#9cc27a" stroke="#1c3328" stroke-width="1.4"/><path d="M60 40 Q66 70 58 100 Q52 118 48 130" fill="none" stroke="#4e7d55" stroke-width="5" stroke-linecap="round" opacity=".6"/>
- <g fill="#9cc27a" stroke="#1c3328" stroke-width=".8"><circle cx="-14" cy="84" r="3"/><circle cx="-10" cy="88" r="2"/><circle cx="-17" cy="89" r="1.6"/></g>
- <g fill="none" stroke="#1c3328" stroke-width=".6" stroke-dasharray="2 1.5"><rect x="-29" y="-4" width="26" height="22" rx="3"/><rect x="-29" y="34" width="26" height="22" rx="3"/></g>
- <g fill="#9cc27a" stroke="#1c3328" stroke-width=".8"><ellipse cx="-16" cy="7" rx="4" ry="2.5"/><ellipse cx="-11" cy="3" rx="2" ry="1.5"/><path d="M-24 44 Q-18 38 -10 42 Q-8 48 -16 49 Q-22 50 -24 44Z"/></g>
- <polyline points="${CITIES.map(c=>c.x+','+c.y).join(' ')}" fill="none" stroke="#4e7d55" stroke-width="1" stroke-dasharray="2.5 2" opacity=".8"/>`;
- CITIES.forEach((c,i)=>{const got=S.badges>i,here=i===S.city,u=open(i);svg+=`<g><circle cx="${c.x}" cy="${c.y}" r="${here?4.6:3.6}" fill="${got?'#4e7d55':u?'#e3efc4':'#e3efc4'}" stroke="${here?'#9cc27a':'#1c3328'}" stroke-width="${here?1.8:1}"/><text x="${c.x}" y="${c.y+1.4}" font-size="3.6" font-weight="800" text-anchor="middle" fill="${got?'#e3efc4':'#1c3328'}" font-family="sans-serif">${i+1}</text></g>`});
- svg+=`<g transform="translate(78 4)"><path d="M0 -4 L3 2 L-3 2Z" fill="${S.badges>=22?'#9cc27a':'#e3efc4'}" stroke="#1c3328" stroke-width=".6"/></g></svg>`;
+ let svg=`<svg class="mapsvg" viewBox="-32 -8 134 172" role="img" aria-label="Taiwan map"><rect x="-32" y="-8" width="134" height="172" rx="8" fill="#c9ecff"/>
+ <polygon points="${TW_PTS}" fill="#8bd36b" stroke="#1b2340" stroke-width="1.4"/><path d="M60 40 Q66 70 58 100 Q52 118 48 130" fill="none" stroke="#4fae54" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+ <g fill="#8bd36b" stroke="#1b2340" stroke-width=".8"><circle cx="-14" cy="84" r="3"/><circle cx="-10" cy="88" r="2"/><circle cx="-17" cy="89" r="1.6"/></g>
+ <g fill="none" stroke="#1b2340" stroke-width=".6" stroke-dasharray="2 1.5"><rect x="-29" y="-4" width="26" height="22" rx="3"/><rect x="-29" y="34" width="26" height="22" rx="3"/></g>
+ <g fill="#8bd36b" stroke="#1b2340" stroke-width=".8"><ellipse cx="-16" cy="7" rx="4" ry="2.5"/><ellipse cx="-11" cy="3" rx="2" ry="1.5"/><path d="M-24 44 Q-18 38 -10 42 Q-8 48 -16 49 Q-22 50 -24 44Z"/></g>
+ <polyline points="${CITIES.map(c=>c.x+','+c.y).join(' ')}" fill="none" stroke="#ff5b4a" stroke-width="1" stroke-dasharray="2.5 2" opacity=".8"/>`;
+ CITIES.forEach((c,i)=>{const got=S.badges>i,here=i===S.city,u=open(i);svg+=`<g><circle cx="${c.x}" cy="${c.y}" r="${here?4.6:3.6}" fill="${got?'#ff5b4a':u?'#fffaf0':'#c9ecff'}" stroke="${here?'#ffc93c':'#1b2340'}" stroke-width="${here?1.8:1}"/><text x="${c.x}" y="${c.y+1.4}" font-size="3.6" font-weight="800" text-anchor="middle" fill="${got?'#fffaf0':'#1b2340'}" font-family="sans-serif">${i+1}</text></g>`});
+ svg+=`<g transform="translate(78 4)"><path d="M0 -4 L3 2 L-3 2Z" fill="${S.badges>=22?'#ffc93c':'#c9ecff'}" stroke="#1b2340" stroke-width=".6"/></g></svg>`;
  const list=CITIES.map((c,i)=>`<button data-ci="${i}" ${open(i)?'':'disabled'} class="${i===S.city?'here':''} ${S.badges>i?'got':''}"><span class="n">${i+1}</span><span>${rb(c.zh)}<span class="tl">${esc(LI()===2?c.ja:c.en)}</span></span></button>`).join('');
  const lg2=LEAGUE.map((L,t)=>`<button data-lg="${t}" ${S.badges>=22&&t<=S.league?'':'disabled'} class="${t<S.league?'got':''}"><span class="n">${t+1}</span><span>${rb(L.zh)}<span class="tl">${esc(tr(['',L.en,L.ja]))}</span></span></button>`).join('');
  openPanel(head('map',backBtn())+`<div class="pbody"><div class="mapwrap"><div>${svg}</div><div>
@@ -45,7 +45,7 @@ function partyMenu(){const pets=S.pets||[];
  const unseen=ANIMALS.filter(a=>!has(a.id)).map(a=>`<div class="tile dim"><span data-an="${a.id}" data-dim="1"></span><div><div class="t">？？？</div><div class="d">${a.minCity>0?rb(CITIES[a.minCity].zh)+'+':''}</div></div></div>`).join('');
  openPanel(head('party',backBtn())+`<div class="pbody"><div class="note">${rb('用寵物零食餵牠，牠就會累積經驗、提升等級，能力也會變強。')}<br>${esc(tr(['',"Feed pet treats to give your companions EXP. As they level up, their abilities get stronger.","おやつをあげると仲間に経験値が入り、レベルが上がると能力も強くなります。"]))}</div>
  <div class="grid">${pets.map(card).join('')||`<div class="note">${rb('還沒有夥伴。')}</div>`}</div>${unseen?`<div class="grid">${unseen}</div>`:''}</div>`);wireBack();
- $('#panel').querySelectorAll('[data-an]').forEach(s=>{const id=s.dataset.an;const c=document.createElement('canvas');c.width=120;c.height=120;c.style.cssText='width:60px;height:60px;flex:none'+(s.dataset.dim?';filter:brightness(0) opacity(.25)':'');renderPixel(c,60,60,2,3,g=>drawAnimal(g,id,30,56,46),{adaptive:true});s.replaceWith(c)});
+ $('#panel').querySelectorAll('[data-an]').forEach(s=>{const id=s.dataset.an;const c=document.createElement('canvas');c.width=120;c.height=120;c.style.cssText='width:60px;height:60px;flex:none'+(s.dataset.dim?';filter:brightness(0) opacity(.25)':'');renderPixel(c,60,60,2,3,g=>drawAnimal(g,id,30,56,46));s.replaceWith(c)});
  $('#panel').querySelectorAll('[data-feed]').forEach(b=>b.onclick=()=>{const p=pets[+b.dataset.feed];if(S.bag.snack<1)return toast(UI.noTreat);S.bag.snack--;p.xp+=15;let up=false;while(p.xp>=petNeed(p.lv)){p.xp-=petNeed(p.lv);p.lv++;up=true}
   if(up)toast([`${petName(p)}升到Lv ${p.lv}了！`,`${petName(p)} grew to Lv ${p.lv}!`,`${petName(p)}はLv ${p.lv}になった！`]);else toast(UI.petFed);save();hud();partyMenu()});
  $('#panel').querySelectorAll('[data-ren]').forEach(b=>b.onclick=()=>{const i=+b.dataset.ren,box=$(`[data-renbox="${i}"]`);box.innerHTML=`<div class="row" style="margin-top:6px"><input type="text" maxlength="8" value="${esc(pets[i].nick)}" style="flex:1;min-width:0"><button class="btn teal">${Z('ok')}</button></div>`;
