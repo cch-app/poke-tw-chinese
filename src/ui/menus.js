@@ -8,14 +8,15 @@ import { LI, T, Z, itemTr, rb, tr } from '../i18n.js';
 import { mode } from '../scene.js';
 import { bootBackdrop, titleScreen } from '../scenes/title.js';
 import { speak, twVoices } from '../speech.js';
-import { S, clearSave, has, maxFat, petName, petNeed, save } from '../state.js';
+import { S, clearSave, has, maxFat, petName, petNeed, save, xpNeed } from '../state.js';
 import { refreshView, travel } from '../world/overworld.js';
 import { choice, say } from './dialog.js';
 import { hud, toast } from './hud.js';
 import { backBtn, btn, head, openPanel, wireBack } from './panel.js';
 
 export async function mainMenu(){if(mode!=='world')return;const keys=['map','party','bag','badges','dex','save','settings','close'];
- const i=await choice(keys.map(k=>`${Z(k)} <span class="tl" style="display:inline">${T(k)}</span>`),{cls:'start',title:`${esc(S.name)} · Lv ${S.lv}`});
+ const stats=`${Z('fatigue')} ${S.fat}/${maxFat()} · EXP ${S.xp}/${xpNeed(S.lv)} · NT$${S.money} · ★${S.badges}/22`;
+ const i=await choice(keys.map(k=>`${Z(k)} <span class="tl" style="display:inline">${T(k)}</span>`),{cls:'start',title:`${esc(S.name)} · Lv ${S.lv}<span class="tl menuStats">${stats}</span>`});
  if(i<0||keys[i]==='close')return;
  if(keys[i]==='save'){save();return say([UI.savedLong])}
  ({map:mapMenu,party:partyMenu,bag:bagMenu,badges:badgeMenu,dex:dexMenu,settings:settingsMenu})[keys[i]]()}

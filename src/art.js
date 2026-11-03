@@ -3,7 +3,6 @@ import { CITIES } from './data/index.js';
 import { storeBrand } from './data/stores.js';
 import { settings } from './state.js';
 import { segment, toMark, toZhu } from './text.js';
-import { spriteTaoyuanBuilding } from './art/taoyuan-kit.js';
 
 
 export const OUT='#2a2238';
@@ -108,7 +107,34 @@ export function spriteArch(u,dpr,city){const w=4*u,h=2.6*u;const cv=mkc(w,h,dpr)
 
 /* ---------- 建築 ---------- */
 export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:.7},tea:{w:4,h:3,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
-export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){if(city?.id==='taoyuan')return spriteTaoyuanBuilding(kind,u,dpr,city,emblemImg,brandId);
+// A readable façade kit: one roof plane, one front wall, a small number of
+// windows, and one guaranteed entrance. Detailed interior gameplay remains
+// unchanged; this keeps every city building legible at the map's scale.
+function spriteSimpleBuilding(kind,u,dpr,city,brandId){
+ const b=BLD[kind],w=b.w*u,h=(b.h+b.ex)*u,cv=mkc(w,h,dpr),c=cv.getContext('2d'),lw=Math.max(1.4,u*.035);
+ const body={gym:'#e7edf1',inn:'#ead8bb',store:'#eef1f2',tea:'#b98253',temple:'#b63b32',house:'#d8d2c5'}[kind]||'#e7edf1';
+ const roof=kind==='temple'?'#e28b2e':city?.roof||'#7588a8', frontY=kind==='gym'?u*1.42:kind==='store'?u*.72:kind==='tea'?u*.94:u*.84;
+ const x=u*.16,right=w-u*.35,bottom=h-u*.08,depth=u*.28;
+ c.fillStyle='rgba(18,25,35,.16)';c.fillRect(x+u*.18,bottom-u*.2,w-x,u*.24);
+ rr(c,x,frontY,right-x,bottom-frontY,u*.05);fs(c,lg(c,x,frontY,right,frontY,[shade(body,.1),body]),lw);
+ c.beginPath();c.moveTo(right,frontY);c.lineTo(w-u*.05,frontY+depth);c.lineTo(w-u*.05,bottom-u*.18);c.lineTo(right,bottom);c.closePath();fs(c,shade(body,-.2),lw);
+ c.beginPath();c.moveTo(x,frontY);c.lineTo(x+depth,frontY-depth);c.lineTo(w-u*.28,frontY-depth);c.lineTo(w-u*.05,frontY);c.lineTo(right,frontY+depth);c.lineTo(x,frontY+depth);c.closePath();fs(c,lg(c,x,frontY-depth,x,frontY+depth,[shade(roof,.18),roof,shade(roof,-.15)]),lw);
+ const window=(wx,wy,ww,wh)=>{rr(c,wx,wy,ww,wh,u*.035);fs(c,lg(c,wx,wy,wx,wy+wh,['#d6f3ff','#74afd0']),lw*.75);c.fillStyle='rgba(255,255,255,.48)';c.fillRect(wx+ww*.12,wy+wh*.12,ww*.12,wh*.62);c.strokeStyle='rgba(37,40,58,.5)';c.lineWidth=u*.02;c.beginPath();c.moveTo(wx+ww/2,wy);c.lineTo(wx+ww/2,wy+wh);c.stroke()};
+ const door=(dw=u*.82,dh=u*1.25)=>{const dx=w/2-dw/2,dy=bottom-dh;rr(c,dx,dy,dw,dh,u*.045);fs(c,lg(c,dx,dy,dx,dy+dh,['#617f9a','#27384f']),lw);c.fillStyle='#f3d267';c.fillRect(dx+dw-u*.1,dy+dh*.55,u*.045,u*.07)};
+ const label=kind==='store'?(storeBrand(brandId)?.sign||'超商'):({gym:'道館',inn:'旅館',tea:'茶',temple:'廟',house:'民宅'}[kind]);
+ const labelBg=kind==='store'?'#ffffff':kind==='temple'?'#2e7862':city?.roof||'#26394f',labelFg=kind==='store'?(storeBrand(brandId)?.primary||city?.roof||'#1b2340'):'#ffffff';
+ rr(c,u*.32,frontY+u*.16,w-u*.82,u*.46,u*.05);fs(c,labelBg,lw*.8);canvasRuby(c,label,w/2,frontY+u*.48,u*(kind==='store'?.2:.24),labelFg);
+ if(kind==='gym'){for(let i=0;i<4;i++)window(u*.45+i*(w-u*.9)/4,frontY+u*.78,(w-u*1.1)/4,u*.58)}
+ else if(kind==='inn'){for(let i=0;i<3;i++)window(u*.45+i*(w-u*.9)/3,frontY+u*.95,(w-u*1.2)/3,u*.58)}
+ else if(kind==='store'){window(u*.42,frontY+u*.78,u*1.05,u*1.35);window(w-u*1.55,frontY+u*.78,u*.82,u*1.35)}
+ else if(kind==='house'){window(u*.48,frontY+u*.88,w-u*1.1,u*.65);window(u*.48,frontY+u*1.85,w-u*1.1,u*.65)}
+ else if(kind==='tea'){window(u*.48,frontY+u*.8,w-u*1.1,u*.68)}
+ else {window(u*.5,frontY+u*.9,u*1.05,u*.66);window(w-u*1.55,frontY+u*.9,u*1.05,u*.66)}
+ door(kind==='store'?u*.78:u*.84,kind==='gym'?u*1.35:u*1.2);return cv;
+}
+export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){
+ return spriteSimpleBuilding(kind,u,dpr,city,brandId);
+ /* legacy detailed façade retained below as a reference while the simple kit is evaluated. */
  const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
  const door=(cx,dw,dh,col1,col2)=>{rr(c,cx-dw/2,h-dh,dw,dh,u*.06);fs(c,lg(c,0,h-dh,0,h,[col1,col2]),lw);c.beginPath();c.moveTo(cx,h-dh);c.lineTo(cx,h);c.strokeStyle=OUT;c.lineWidth=lw;c.stroke();
   c.fillStyle='rgba(255,255,255,.45)';c.beginPath();c.moveTo(cx-dw/2+u*.08,h-dh+u*.1);c.lineTo(cx-dw/2+u*.22,h-dh+u*.1);c.lineTo(cx-dw/2+u*.08,h-dh+u*.4);c.fill()};

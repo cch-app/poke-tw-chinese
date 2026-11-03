@@ -9,23 +9,49 @@ import { CLERK, guardLook, leaderLook, lookFromTrainer } from './looks.js';
 
 const W=24;
 export const H=34;
+const ROAD_VARIANTS=[
+ {v:[4,11,12,19],h:[6,14,25],area:'plaza'},
+ {v:[2,8,11,12,21],h:[9,18,28],area:'waterfront'},
+ {v:[6,11,12,17],h:[5,13,23,30],area:'market'},
+ {v:[3,10,11,12,20],h:[7,16,26],area:'park'},
+ {v:[5,11,12,18],h:[10,15,24,31],area:'rice'},
+];
+function roadsFor(ci){return ROAD_VARIANTS[ci%ROAD_VARIANTS.length]}
 export function genMap(ci){const r=rng(ci*7919+13),city=CITIES[ci];const g=Array.from({length:H},()=>Array(W).fill(GT.G));const objs=[],doors={};
  const blocked=Array.from({length:H},()=>Array(W).fill(false));
  const block=(x,y)=>{if(blocked[y])blocked[y][x]=true};
- for(let x=1;x<=22;x++){g[7][x]=GT.PB;g[8][x]=GT.PB;g[13][x]=GT.PB;g[14][x]=GT.PB}
- for(let y=0;y<H;y++){g[y][11]=y<16?GT.PB:GT.PD;g[y][12]=y<16?GT.PB:GT.PD}
+ const route=roadsFor(ci);
+ // Every town has a different street skeleton. Vertical lanes reaching both
+ // map edges form several possible highways to adjacent cities.
+ route.v.forEach(x=>{for(let y=0;y<H;y++)g[y][x]=y<16?GT.PB:GT.PD});
+ route.h.forEach(y=>{for(let x=1;x<23;x++)if(g[y][x]===GT.G)g[y][x]=GT.PB});
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(g[y][x]===GT.PB||g[y][x]===GT.PD)blocked[y][x]=false;
  const shopR=rng(ci*3571+101),primaryShop=STORE_BRANDS[Math.floor(shopR()*STORE_BRANDS.length)].id;
- const bl=[['gym',2,2],['inn',14,2],['store',1,9,primaryShop],['tea',6,10],['temple',13,9],['house',20,9]];
+ const shift=ci%4;
+ const bl=[['gym',1+(shift%2),2],['inn',14-(shift%3),2],['store',1+(shift%2),9,primaryShop],['tea',6+(shift%2),10],['temple',13-(shift%2),9],['house',20-(shift%2),9]];
  const hasSecondShop=shopR()<.38;if(hasSecondShop){let second=STORE_BRANDS[Math.floor(shopR()*STORE_BRANDS.length)].id;if(second===primaryShop)second=STORE_BRANDS[(STORE_BRANDS.findIndex(b=>b.id===second)+1)%STORE_BRANDS.length].id;bl.push(['store',1,18,second])}
+ // Small neighborhood buildings make each city feel inhabited without
+ // turning the town into a wall of façades.
+ if(shift===1||shift===3)bl.push(['house',16,17]);
+ if(shift===0||ci%5===2)bl.push(['house',20,19]);
  bl.forEach(([kind,bx,by,brand])=>{const b=BLD[kind];const o={type:'bld',kind,x:bx,y:by,w:b.w,h:b.h,...(brand&&{brand})};objs.push(o);
   for(let y=by;y<by+b.h;y++)for(let x=bx;x<bx+b.w;x++)block(x,y);const dx=bx+Math.floor(b.w/2),dy=by+b.h-1;blocked[dy][dx]=false;doors[dx+','+dy]=brand?{kind,brand}:kind;o.door=[dx,dy]});
  g[7][9]=GT.PB;
  [[10,6],[13,6],[10,12],[19,15],[4,15]].forEach(([x,y])=>{objs.push({type:'lamp',x,y});block(x,y)});
  objs.push({type:'sign',x:9,y:6,what:'gym'});block(9,6);
  objs.push({type:'arch',x:10,y:1});block(10,1);block(13,1);
- // 邊界樹
+ // District signatures: each city gets one extra public area in addition to
+ // its roads, buildings and grass. The seed keeps the result stable per city.
+ const area=route.area;
+ const paintArea=(x,y,w,h,t)=>{for(let yy=y;yy<Math.min(H-1,y+h);yy++)for(let xx=x;xx<Math.min(23,x+w);xx++)if(!blocked[yy][xx]){g[yy][xx]=t;if(t===GT.WA)block(xx,yy)}};
+ if(area==='plaza'){paintArea(7,16,9,3,GT.PB);[[7,16],[15,16]].forEach(([x,y])=>{objs.push({type:'lamp',x,y});block(x,y)})}
+ if(area==='waterfront'){paintArea(16,19,6,3,GT.WA);for(let x=16;x<22;x+=2){objs.push({type:'lamp',x,y:18});block(x,18)}}
+ if(area==='market'){paintArea(2,16,6,3,GT.PD);for(let x=3;x<8;x+=2)objs.push({type:'lamp',x,y:15})}
+ if(area==='park'){paintArea(15,18,7,4,GT.FL);for(let i=0;i<4;i++){const x=16+i*2;objs.push({type:'tree',x,y:20,kind:city.tree});block(x,20)}}
+ if(area==='rice'){paintArea(2,20,6,4,GT.TG);paintArea(16,26,6,3,GT.TG)}
+ // 邊界樹; leave every highway mouth open so adjacent cities visibly connect.
  for(let y=0;y<H;y++){[0,23].forEach(x=>{objs.push({type:'tree',x,y,kind:city.tree});block(x,y)})}
- for(let x=1;x<23;x++){if(x===11||x===12)continue;if(!blocked[0][x]){objs.push({type:'tree',x,y:0,kind:city.tree});block(x,0)}objs.push({type:'tree',x,y:H-1,kind:city.tree});block(x,H-1)}
+ for(let x=1;x<23;x++){if(route.v.includes(x))continue;if(!blocked[0][x]){objs.push({type:'tree',x,y:0,kind:city.tree});block(x,0)}if(!route.v.includes(x)){objs.push({type:'tree',x,y:H-1,kind:city.tree});block(x,H-1)}}
  // 鎮上的空地放花
  for(let i=0;i<14;i++){const x=1+Math.floor(r()*22),y=15+Math.floor(r()*2);if(g[y][x]===GT.G&&!blocked[y][x])g[y][x]=GT.FL}
  // 路線：高草叢

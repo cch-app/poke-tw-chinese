@@ -5,7 +5,7 @@ import {
   FILLMODE_NONE, RESOLUTION_AUTO, PROJECTION_ORTHOGRAPHIC, GAMMA_NONE, TONEMAP_NONE,
   Entity, Layer, SORTMODE_MANUAL, Mesh, MeshInstance, GraphNode, ShaderMaterial, Texture,
   SEMANTIC_POSITION, SEMANTIC_TEXCOORD0, BLEND_PREMULTIPLIED, CULLFACE_NONE,
-  PIXELFORMAT_RGBA8, FILTER_LINEAR, ADDRESS_CLAMP_TO_EDGE,
+  PIXELFORMAT_RGBA8, FILTER_NEAREST, ADDRESS_CLAMP_TO_EDGE,
 } from 'playcanvas';
 
 /* ---------- 著色器：貼圖＋柔和的左上方日光（預乘 alpha） ---------- */
@@ -83,7 +83,8 @@ export function createWebglBackend(canvas) {
   quad.update();
 
   const mats = new Map(), shadowMats = new Map(), colors = new Map(), pool = [];
-  let used = 0;
+  let used = 0, pixelRatio = 1;
+  const snap = value => Math.round(value * pixelRatio) / pixelRatio;
 
   function material(tex) {
     let m = mats.get(tex);
@@ -116,7 +117,8 @@ export function createWebglBackend(canvas) {
     createTexture(cv) {
       const tex = new Texture(device, {
         width: cv.width, height: cv.height, format: PIXELFORMAT_RGBA8, mipmaps: false, premultiplyAlpha: true,
-        minFilter: FILTER_LINEAR, magFilter: FILTER_LINEAR, addressU: ADDRESS_CLAMP_TO_EDGE, addressV: ADDRESS_CLAMP_TO_EDGE,
+        // Preserve authored edges when the orthographic camera lands between CSS pixels.
+        minFilter: FILTER_NEAREST, magFilter: FILTER_NEAREST, addressU: ADDRESS_CLAMP_TO_EDGE, addressV: ADDRESS_CLAMP_TO_EDGE,
       });
       tex.setSource(cv);
       return tex;
@@ -128,12 +130,12 @@ export function createWebglBackend(canvas) {
       if (sm) { sm.destroy(); shadowMats.delete(tex) }
       tex.destroy();
     },
-    resize(cssW, cssH, dpr) { device.maxPixelRatio = dpr; app.updateCanvasSize() },
+    resize(cssW, cssH, dpr) { pixelRatio = dpr; device.maxPixelRatio = dpr; app.updateCanvasSize() },
     begin(clear, cx, cy, w, h) {
       used = 0;
       cam.camera.clearColor = color(clear);
       cam.camera.orthoHeight = h / 2;
-      cam.setLocalPosition(cx + w / 2, -(cy + h / 2), 10);
+      cam.setLocalPosition(snap(cx + w / 2), snap(-(cy + h / 2)), 10);
     },
     draw(tex, x, y, w, h, alpha, effects = 0) {
       let q = pool[used];
@@ -154,15 +156,15 @@ export function createWebglBackend(canvas) {
       q.mi.visible = true;
       q.mi.setParameter('uOpacity', alpha);
       q.mi.setParameter('uLit', effects & 1 ? 1 : 0);
-      q.node.setLocalPosition(x, -(y + h), 0);
-      q.node.setLocalScale(w, h, 1);
+      q.node.setLocalPosition(snap(x), snap(-(y + h)), 0);
+      q.node.setLocalScale(snap(w), snap(h), 1);
       q.shadowMi.drawOrder = order;
       q.shadowMi.visible = castsShadow;
       if (castsShadow) {
         q.shadowMi.material = shadowMaterial(tex);
         q.shadowMi.setParameter('uOpacity', alpha * .22);
-        q.shadowNode.setLocalPosition(x + w * .08, -(y + h), 0);
-        q.shadowNode.setLocalScale(w * .92, h * .18, 1);
+        q.shadowNode.setLocalPosition(snap(x + w * .08), snap(-(y + h)), 0);
+        q.shadowNode.setLocalScale(snap(w * .92), snap(h * .18), 1);
       }
     },
     end() { for (let i = used; i < pool.length; i++) { pool[i].mi.visible = false; pool[i].shadowMi.visible = false } },

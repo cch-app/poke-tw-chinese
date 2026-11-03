@@ -115,17 +115,17 @@ export function enhanceTaoyuanGround(cv, map, u) {
 const poly = (c, pts, color, lw) => { path(c, pts); fill(c, color, lw) };
 export function drawTaoyuanChar(c, cx, footY, s, look, dir, step) {
   const lw = Math.max(1.1, s * .035), side = dir === 'left' || dir === 'right', back = dir === 'up', flip = dir === 'left' ? -1 : 1;
-  const bob = step ? -s * .025 : 0, y = footY + bob, skin = look.skin || '#efbd92', hair = look.hair || '#3d2c29';
+  const phase = Math.sign(step), bob = phase ? -s * .025 : 0, y = footY + bob, skin = look.skin || '#efbd92', hair = look.hair || '#3d2c29';
   const top = look.top || '#4b79b8', bottom = look.bottom || '#34445b', shoes = look.shoes || '#3b3340';
   c.save(); c.translate(cx, 0); c.scale(flip, 1); c.translate(-cx, 0); c.lineJoin = 'round'; c.lineCap = 'round';
-  const stride = step ? s * .075 : 0;
+  const stride = phase * s * .075;
   // Compact six-head silhouette, with the same limited three-tone ramp used by buildings.
   poly(c, [[cx - s * .24 - stride, y - s * .34], [cx - s * .06, y - s * .36], [cx - s * .03, y - s * .06], [cx - s * .2, y - s * .03]], shade(bottom, -.14), lw);
   poly(c, [[cx + s * .03, y - s * .36], [cx + s * .21 + stride, y - s * .33], [cx + s * .19, y - s * .03], [cx + s * .02, y - s * .06]], bottom, lw);
   rr(c, cx - s * .23 - stride, y - s * .09, s * .23, s * .1, s * .04); fill(c, shoes, lw); rr(c, cx + s * .01, y - s * .09, s * .25 + stride, s * .1, s * .04); fill(c, shade(shoes, -.08), lw);
   const torsoX = side ? cx - s * .2 : cx - s * .25; rr(c, torsoX, y - s * .75, side ? s * .4 : s * .5, s * .43, s * .09); fill(c, grad(c, torsoX, 0, torsoX + s * .5, 0, [shade(top, .18), top, shade(top, -.15)]), lw);
   if (look.pack) { rr(c, back ? cx - s * .28 : cx + s * .17, y - s * .69, s * .24, s * .34, s * .07); fill(c, shade(top, -.28), lw) }
-  const armSwing = step ? s * .055 : 0;
+  const armSwing = phase * s * .055;
   c.strokeStyle = shade(top, -.09); c.lineWidth = s * .16; c.beginPath(); c.moveTo(cx - s * .2, y - s * .66); c.lineTo(cx - s * .31, y - s * .38 + armSwing); c.stroke();
   c.strokeStyle = top; c.beginPath(); c.moveTo(cx + s * .2, y - s * .66); c.lineTo(cx + s * .31, y - s * .38 - armSwing); c.stroke();
   c.fillStyle = skin; c.beginPath(); c.arc(cx - s * .31, y - s * .35 + armSwing, s * .075, 0, Math.PI * 2); c.fill(); c.beginPath(); c.arc(cx + s * .31, y - s * .35 - armSwing, s * .075, 0, Math.PI * 2); c.fill();

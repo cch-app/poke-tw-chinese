@@ -28,8 +28,9 @@ export const refreshView=()=>view.invalidate();
 const frameState={map:null,player:{x:0,y:0,dir:'down',step:0,moving:false},look:null,trainerLook,bubble:null};
 const nothing=()=>{};
 function drawFrame(now){if(!MAP||!S)return view.frame(now,0,0,nothing);const p=frameState.player;
- p.x=mv?mv.fx+(mv.tx-mv.fx)*mv.t:S.x;p.y=mv?mv.fy+(mv.ty-mv.fy)*mv.t:S.y;p.dir=S.dir;p.moving=!!mv;
- p.step=mv&&mv.t>.2&&mv.t<.8?(Math.floor(now/133)%2?1:-1):0;
+  p.x=mv?mv.fx+(mv.tx-mv.fx)*mv.t:S.x;p.y=mv?mv.fy+(mv.ty-mv.fy)*mv.t:S.y;p.dir=S.dir;p.moving=!!mv;
+  // A deterministic three-pose cycle (plant → pass → plant) reads clearly at any frame rate.
+  p.step=!mv||mv.t<=.18||mv.t>=.82?0:mv.t<.5?-1:1;
  frameState.map=MAP;frameState.look=playerLook();frameState.bubble=bubble;view.frame(now,p.x,p.y,describeMap,frameState)}
 
 /* ---------- 輸入：方向鍵按住就一直走 ---------- */
