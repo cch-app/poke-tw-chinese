@@ -15,12 +15,12 @@ export function withSettings(st,fn){const keep=S;S={settings:st};try{return fn()
 
 /* ---------- 存檔 ---------- */
 export function fresh(name){const ja=(navigator.language||'').toLowerCase().startsWith('ja');
- return{v:2,name,gender:'m',lv:1,xp:0,fat:45,money:300,bag:{snack:1,drink:1,bubble:0},badges:0,city:0,x:11,y:2,dir:'down',pets:[],seen:{},beaten:{},league:0,champion:false,luck:0,
+ return{v:2,name,gender:'m',lv:1,xp:0,fat:45,money:300,bag:{snack:1,drink:1,bubble:0,coffee:0},badges:0,city:0,x:11,y:2,dir:'down',pets:[],seen:{},beaten:{},league:0,champion:false,luck:0,
   settings:{ruby:'pinyin',lang:ja?'ja':'en',rate:.9,voice:''}}}
 export function save(){try{const o=Object.assign({},S);if(MAP&&MAP.kind==='in'&&MAP.ret){o.x=MAP.ret.x;o.y=MAP.ret.y}localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
 export function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
 export function clearSave(){try{localStorage.removeItem(KEY)}catch(e){}}
-export function migrate(){if(!S.pets){S.pets=(S.comps||[]).map(sp=>({sp,nick:'',lv:1,xp:0}))}delete S.comps}
+export function migrate(){if(!S.pets){S.pets=(S.comps||[]).map(sp=>({sp,nick:'',lv:1,xp:0}))}delete S.comps;S.bag=Object.assign({snack:0,drink:0,bubble:0,coffee:0},S.bag||{})}
 
 /* ---------- 由存檔算出的數值 ---------- */
 export const has=id=>(S.pets||[]).some(p=>p.sp===id);

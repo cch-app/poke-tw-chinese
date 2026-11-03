@@ -5,7 +5,7 @@ import {
   FILLMODE_NONE, RESOLUTION_AUTO, PROJECTION_ORTHOGRAPHIC, GAMMA_NONE, TONEMAP_NONE,
   Entity, Layer, SORTMODE_MANUAL, Mesh, MeshInstance, GraphNode, ShaderMaterial, Texture,
   SEMANTIC_POSITION, SEMANTIC_TEXCOORD0, BLEND_PREMULTIPLIED, CULLFACE_NONE,
-  PIXELFORMAT_RGBA8, FILTER_NEAREST, ADDRESS_CLAMP_TO_EDGE,
+  PIXELFORMAT_RGBA8, FILTER_LINEAR, ADDRESS_CLAMP_TO_EDGE,
 } from 'playcanvas';
 
 /* ---------- 著色器：貼圖＋柔和的左上方日光（預乘 alpha） ---------- */
@@ -118,7 +118,7 @@ export function createWebglBackend(canvas) {
       const tex = new Texture(device, {
         width: cv.width, height: cv.height, format: PIXELFORMAT_RGBA8, mipmaps: false, premultiplyAlpha: true,
         // Preserve authored edges when the orthographic camera lands between CSS pixels.
-        minFilter: FILTER_NEAREST, magFilter: FILTER_NEAREST, addressU: ADDRESS_CLAMP_TO_EDGE, addressV: ADDRESS_CLAMP_TO_EDGE,
+        minFilter: FILTER_LINEAR, magFilter: FILTER_LINEAR, addressU: ADDRESS_CLAMP_TO_EDGE, addressV: ADDRESS_CLAMP_TO_EDGE,
       });
       tex.setSource(cv);
       return tex;

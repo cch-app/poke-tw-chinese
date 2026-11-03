@@ -18,7 +18,9 @@ export const H=34;
  * 城市之間的差別放在南邊：第二家超商、民宅、特色區、池塘、樹和草叢的位置。
  */
 const AVENUE=[11,12],STREETS=[7,8,13,14],LANE=20;
-const CORE=[['gym',2,2],['inn',14,2],['store',1,9],['tea',6,10],['temple',13,9],['house',20,9]];
+// Every city has the same essential services, plus both a drink stand and a coffee shop.
+// The coffee shop sits in the south district so its entrance has a dedicated approach.
+const CORE=[['gym',2,2],['inn',14,2],['store',1,9],['tea',6,10],['temple',13,9],['coffee',6,15],['house',20,9]];
 // 南邊空地（門口都在第 19 列，前面就是第 20 列的小巷）
 const LOT_W=[1,16],LOT_E1=[15,16],LOT_E2=[19,16];
 const AREAS=['plaza','waterfront','market','park','rice'];
@@ -92,7 +94,11 @@ export function genInterior(kind,ci,ret,brand=null){const gym=kind==='gym',w=11,
  else{for(let x=1;x<w-1;x++)blocked[2][x]=true;add('counter',3,3,5,1);npcs.push({x:5,y:2,dir:'down',role:'clerk',kind,look:CLERK[kind]});
   if(kind==='store'){add('shelf',1,5,2,1);add('shelf',1,7,2,1);add('shelf',8,5,2,1);add('shelf',8,7,2,1);add('plant',9,3);add('rack',1,3)}
   if(kind==='inn'){add('sofa',1,5,2,1);add('sofa',8,5,2,1);add('plant',1,3);add('plant',9,3);add('dispenser',9,8)}
-  if(kind==='tea'){add('table',2,6);add('table',8,6);add('plant',1,3);add('plant',9,3)}
+  if(kind==='tea'||kind==='coffee'){
+   // Each table and chair occupies its own tile so the seating reads as real furniture.
+   [[2,6],[8,6]].forEach(([x,y])=>{add('table',x,y);add('chair',x,y-1);add('chair',x,y+1)});
+   add('plant',1,3);add('plant',9,3)
+  }
   if(kind==='temple'){add('burner',5,6);add('pillar',1,4);add('pillar',9,4);add('pillar',1,7);add('pillar',9,7);add('cushion',3,4);add('cushion',7,4)}
   const free=[];for(let y=4;y<h-1;y++)for(let x=1;x<w-1;x++)if(!blocked[y][x]&&!(x===5&&y>=h-2))free.push([x,y]);
   const R2=Math.random;for(let k=0;k<2+(R2()<.5?1:0);k++){const[x,y]=free.splice(Math.floor(R2()*free.length),1)[0];const d=pick(TRAINERS);

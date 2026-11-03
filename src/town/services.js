@@ -9,12 +9,12 @@ import { ask, choice, healFx, qtyBox, say, showLine } from '../ui/dialog.js';
 import { hud } from '../ui/hud.js';
 import { opt } from '../ui/panel.js';
 
-const CLERK_NAME={inn:['櫃檯人員',"Receptionist","受付係"],store:['店員',"Clerk","店員"],tea:['店員',"Barista","店員"],temple:['廟公',"Temple keeper","廟の管理人"]};
+const CLERK_NAME={inn:['櫃檯人員',"Receptionist","受付係"],store:['店員',"Clerk","店員"],tea:['店員',"Tea server","店員"],coffee:['咖啡師',"Barista","バリスタ"],temple:['廟公',"Temple keeper","廟の管理人"]};
 export function talkNpc(n){if(n.role==='leader')return leaderTalk();n.dir='down';shopFlow(n.kind)}
 export async function talkWalker(n){n.talk=true;n.dir=OPPOSITE[S.dir];await say([n.line],n.who);
  if(n.gift){const k=n.gift;n.gift=null;S.bag[k]++;save();hud();await say([UI.gift,[`${UI.got[0]}${UI[k][0]}！`,`${UI.got[1]}: ${UI[k][1]}!`,`${UI[k][2]}を${UI.got[2]}！`]],n.who)}n.talk=false}
-const SHOP_ITEMS={store:[['snack',50],['drink',120]],tea:[['bubble',70]]};
-async function shopFlow(kind){const nm=CLERK_NAME[kind][0];const hello={inn:UI.innHello,store:UI.storeHello,tea:UI.teaHello,temple:UI.templeHello}[kind];
+const SHOP_ITEMS={store:[['snack',50],['drink',120]],tea:[['bubble',70]],coffee:[['coffee',90]]};
+async function shopFlow(kind){const nm=CLERK_NAME[kind][0];const hello={inn:UI.innHello,store:UI.storeHello,tea:UI.teaHello,coffee:UI.coffeeHello,temple:UI.templeHello}[kind];
  if(kind==='inn'){const i=await ask(hello,nm,[opt('rest',` NT$${innFee()}`),opt('leave')]);
   if(i===0){if(S.fat>=maxFat())await say([UI.innFull],nm);else if(S.money<innFee())await say([UI.notEnoughL],nm);
    else{const c=await ask([`休息一下要NT$${innFee()}，可以嗎？`,`A rest costs NT$${innFee()}. OK?`,`ご休憩はNT$${innFee()}です。よろしいですか？`],nm,[opt('yes'),opt('no')]);

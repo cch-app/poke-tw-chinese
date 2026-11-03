@@ -85,7 +85,7 @@ export function spriteTree(kind,u,dpr){const W2=2*u,H2=2.5*u;const cv=mkc(W2,H2,
  blobs.forEach(([dx,dy,rad])=>{circ(c,cx+dx*u-rad*u*.15,by+dy*u-rad*u*.18,rad*u*.78);c.fillStyle='#46a84c';c.fill()});
  blobs.forEach(([dx,dy,rad])=>{circ(c,cx+dx*u-rad*u*.32,by+dy*u-rad*u*.36,rad*u*.36);c.fillStyle='#7cd36a';c.fill()});
  return cv}
-export function mkc(w,h,dpr){const cv=document.createElement('canvas');cv.width=Math.ceil(w*dpr);cv.height=Math.ceil(h*dpr);cv.getContext('2d').scale(dpr,dpr);cv._w=w;cv._h=h;return cv}
+export function mkc(w,h,dpr){const cv=document.createElement('canvas');cv.width=Math.ceil(w*dpr);cv.height=Math.ceil(h*dpr);const c=cv.getContext('2d');c.scale(dpr,dpr);c.lineJoin='round';c.lineCap='round';c.imageSmoothingEnabled=true;cv._w=w;cv._h=h;return cv}
 
 /* ---------- 小物件 ---------- */
 export function spriteLamp(u,dpr){const cv=mkc(u,2*u,dpr),c=cv.getContext('2d'),lw=Math.max(1.2,u*.035),cx=u/2,by=1.92*u;
@@ -107,9 +107,9 @@ export function spriteArch(u,dpr,city){const w=4*u,h=2.6*u;const cv=mkc(w,h,dpr)
  canvasRuby(c,city.zh,w/2,h-u*1.33,u*.36,OUT);return cv}
 
 /* ---------- 建築 ---------- */
-export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:.7},tea:{w:4,h:3,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
+export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:.7},tea:{w:4,h:3,ex:1},coffee:{w:5,h:4,ex:.9},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
 // 每種建築一眼就認得：屋頂形狀、顏色和大招牌各不相同（地圖上找路靠的就是這些地標）
-export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){
+function spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId){
  const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
  const door=(cx,dw,dh,col1,col2)=>{rr(c,cx-dw/2,h-dh,dw,dh,u*.06);fs(c,lg(c,0,h-dh,0,h,[col1,col2]),lw);c.beginPath();c.moveTo(cx,h-dh);c.lineTo(cx,h);c.strokeStyle=OUT;c.lineWidth=lw;c.stroke();
   c.fillStyle='rgba(255,255,255,.45)';c.beginPath();c.moveTo(cx-dw/2+u*.08,h-dh+u*.1);c.lineTo(cx-dw/2+u*.22,h-dh+u*.1);c.lineTo(cx-dw/2+u*.08,h-dh+u*.4);c.fill()};
@@ -313,14 +313,14 @@ export function emblemImage(ci){const c=CITIES[ci];const e=(EMB[c.emblem]||'').r
 /* ---------- 室內 ---------- */
 export function paintInterior(M,u,dpr,city,emb){const w=M.w*u,h=M.h*u;const cv=document.createElement('canvas');cv.width=Math.ceil(w*dpr);cv.height=Math.ceil(h*dpr);const c=cv.getContext('2d');c.scale(dpr,dpr);
  const lw=Math.max(1.4,u*.04),k=M.bk,shop=storeBrand(M.brand);
- const FL={inn:['#d9a86c','#c8955a'],store:['#eef1f6','#dde3ec'],tea:['#c99a66','#b98a58'],temple:['#d8d0c0','#c6bca8'],gym:['#f4f6fb','#e3e8f2']}[k];
+ const FL={inn:['#d9a86c','#c8955a'],store:['#eef1f6','#dde3ec'],tea:['#c99a66','#b98a58'],coffee:['#d8b08a','#b77b4f'],temple:['#d8d0c0','#c6bca8'],gym:['#f4f6fb','#e3e8f2']}[k];
  c.fillStyle=FL[0];c.fillRect(0,0,w,h);
  if(k==='inn'||k==='tea'){const rr2=rng(7);for(let y=0;y<h;y+=u/3)for(let x=((y/(u/3))%2)*u*.7-u*1.4;x<w;x+=u*1.4){c.fillStyle=`rgba(${rr2()<.5?'255,255,255':'90,50,20'},${(rr2()*.08).toFixed(3)})`;c.fillRect(x,y,u*1.4,u/3)}c.strokeStyle=FL[1];c.lineWidth=2;for(let y=0;y<h;y+=u/3){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();for(let x=((y/(u/3))%2)*u*.7;x<w;x+=u*1.4){c.beginPath();c.moveTo(x,y);c.lineTo(x,y+u/3);c.stroke()}}}
  else for(let y=0;y<M.h;y++)for(let x=0;x<M.w;x++)if((x+y)%2){c.fillStyle=FL[1];c.fillRect(x*u,y*u,u,u)}
  if(k==='gym'){c.fillStyle=shade(city.roof,.1);c.fillRect(4.6*u,2*u,1.8*u,h-2*u);c.fillStyle='#ffd35a';c.fillRect(4.6*u,2*u,u*.08,h-2*u);c.fillRect(6.32*u,2*u,u*.08,h-2*u);
   for(let y=4;y<M.h;y+=2){c.fillStyle='rgba(255,255,255,.18)';c.fillRect(4.7*u,y*u,1.6*u,u*.12)}}
  if(k==='inn'||k==='temple'){rr(c,3*u,5.2*u,5*u,2.6*u,u*.3);fs(c,k==='inn'?'#e86a3a':'#c8372d',lw);rr(c,3.25*u,5.45*u,4.5*u,2.1*u,u*.2);c.strokeStyle='#ffd35a';c.lineWidth=u*.05;c.stroke()}
- const WALL={inn:'#f6e7c8',store:'#ffffff',tea:'#7a5236',temple:'#b8312a',gym:shade(city.roof,.6)}[k];
+ const WALL={inn:'#f6e7c8',store:'#ffffff',tea:'#7a5236',coffee:'#5b3525',temple:'#b8312a',gym:shade(city.roof,.6)}[k];
  c.fillStyle=WALL;c.fillRect(0,0,w,2*u);c.fillStyle=shade(WALL,-.25);c.fillRect(0,2*u-u*.16,w,u*.16);
  // 牆面裝飾
  if(k==='inn'){rr(c,1.3*u,.35*u,1.6*u,1.1*u,u*.06);fs(c,'#8c643c',lw);rr(c,1.42*u,.47*u,1.36*u,.86*u,u*.04);fs(c,'#bfe6ff',lw*.6);c.beginPath();c.moveTo(1.42*u,1.33*u);c.lineTo(2*u,.75*u);c.lineTo(2.4*u,1.05*u);c.lineTo(2.78*u,.85*u);c.lineTo(2.78*u,1.33*u);c.closePath();fs(c,'#5fae4c');
@@ -344,10 +344,10 @@ export function paintInterior(M,u,dpr,city,emb){const w=M.w*u,h=M.h*u;const cv=d
  return cv}
 
 /* ---------- 室內家具（逐一繪製、依深度排序） ---------- */
-export const FEX={counter:.75,shelf:1.35,sofa:.6,plant:1.05,table:.55,burner:1.05,pillar:1.75,dispenser:1,rack:.85,cushion:.15};
+export const FEX={counter:.75,shelf:1.35,sofa:.6,plant:1.05,table:.55,chair:.5,burner:1.05,pillar:1.75,dispenser:1,rack:.85,cushion:.15};
 export function spriteFurn(f,k,u,dpr,city){const ex=FEX[f.t]||.5,fw=f.w*u,fh=f.h*u,H2=fh+ex*u;const cv=mkc(fw,H2,dpr),c=cv.getContext('2d');const lw=Math.max(1.3,u*.035);const y0=ex*u,yb=H2;
  const shadow=(x,w2)=>{ell(c,x+w2/2,yb-u*.08,w2*.5,u*.13);c.fillStyle='rgba(30,20,10,.22)';c.fill()};
- if(f.t==='counter'){const P={inn:['#c79a6a','#8a5a36','#6b4226'],store:['#e3e8f2','#f7f9fc','#14b3a4'],tea:['#f0d2a8','#d9a873','#a8743f'],temple:['#d8473a','#a3271f','#ffd35a']}[k];
+ if(f.t==='counter'){const P={inn:['#c79a6a','#8a5a36','#6b4226'],store:['#e3e8f2','#f7f9fc','#14b3a4'],tea:['#f0d2a8','#d9a873','#a8743f'],coffee:['#c99a6a','#8a5a36','#5b3525'],temple:['#d8473a','#a3271f','#ffd35a']}[k];
   c.fillStyle='rgba(30,20,10,.2)';c.fillRect(u*.1,yb-u*.12,fw,u*.14);
   rr(c,0,y0+u*.36,fw,fh-u*.36+u*.0,u*.06);fs(c,lg(c,0,y0,0,yb,[shade(P[1],.05),shade(P[1],-.18)]),lw);
   if(k==='temple'){rr(c,u*.15,y0+u*.42,fw-u*.3,fh-u*.6,u*.04);fs(c,'#c8372d',lw*.7);c.strokeStyle='#ffd35a';c.lineWidth=u*.04;rr(c,u*.25,y0+u*.5,fw-u*.5,fh-u*.78,u*.04);c.stroke();
@@ -406,3 +406,46 @@ export function spriteFurn(f,k,u,dpr,city){const ex=FEX[f.t]||.5,fw=f.w*u,fh=f.h
  else if(f.t==='rack'){shadow(u*.1,u*.8);rr(c,u*.12,y0-u*.2,u*.76,fh+u*.1,u*.05);fs(c,'#8a5a36',lw);for(let r=0;r<3;r++)for(let i=0;i<3;i++){rr(c,u*(.18+i*.22),y0-u*.12+r*u*.36,u*.18,u*.3,u*.02);fs(c,['#ff5b4a','#ffc93c','#14b3a4','#7a8cff','#ff8fb6'][(r*3+i)%5],lw*.4);c.fillStyle='rgba(255,255,255,.75)';c.fillRect(u*(.2+i*.22),y0-u*.08+r*u*.36,u*.14,u*.05)}}
  else if(f.t==='cushion'){ell(c,fw/2,yb-u*.45,u*.36,u*.24);fs(c,lg(c,0,yb-u*.7,0,yb-u*.2,['#ff6b5a','#b8312a']),lw);ell(c,fw/2,yb-u*.47,u*.25,u*.15);c.strokeStyle='#ffd35a';c.lineWidth=u*.03;c.stroke()}
  return cv}
+function spriteSimpleShop(kind,u,dpr,city,brandId){
+ const b=BLD[kind],w=b.w*u,h=(b.h+b.ex)*u,cv=mkc(w,h,dpr),c=cv.getContext('2d');
+ const lw=Math.max(1.4,u*.035),fy=h-b.h*u,brand=kind==='store'?storeBrand(brandId):null;
+ c.lineJoin='round';c.lineCap='round';
+ c.fillStyle='rgba(20,30,40,.2)';c.fillRect(u*.18,h-u*.35,w-u*.36,u*.35);
+ rr(c,u*.08,fy,w-u*.16,h-fy,u*.12);fs(c,kind==='store'?'#f3f5f7':kind==='coffee'?'#e2b889':'#d7a66e',lw);
+ const sign=kind==='store'?(brand?.sign||'STORE'):kind==='coffee'?'COFFEE':'茶飲';
+ rr(c,u*.22,fy+u*.16,w-u*.44,u*.46,u*.08);fs(c,kind==='store'?(brand?.primary||'#168447'):kind==='coffee'?'#5b3525':'#8a5634',lw*.8);
+ c.fillStyle=kind==='store'?'#fffaf0':'#fff1d0';c.font=`900 ${u*(sign.length>7?.18:.24)}px system-ui,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(sign,w/2,fy+u*.39);
+ const win=(x,y,ww,wh)=>{rr(c,x,y,ww,wh,u*.05);fs(c,lg(c,0,y,0,y+wh,['#dff4ff','#6fa8c8']),lw*.7);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(x+ww*.16,y+wh*.15,ww*.16,wh*.45)};
+ win(u*.32,fy+u*.82,u*.82,u*.62);win(w-u*1.14,fy+u*.82,u*.82,u*.62);
+ const dw=u*.88,dh=u*1.18,dx=w/2-dw/2;rr(c,dx,h-dh,dw,dh,u*.07);fs(c,kind==='store'?'#7fb5d7':kind==='coffee'?'#8a5a3b':'#6f9fc4',lw);
+ c.strokeStyle='rgba(255,255,255,.65)';c.lineWidth=Math.max(1,u*.025);c.beginPath();c.moveTo(w/2,h-dh+u*.1);c.lineTo(w/2,h-u*.08);c.stroke();
+ c.fillStyle='#ffd35a';c.beginPath();c.arc(dx+dw-u*.16,h-dh+dh*.55,u*.045,0,Math.PI*2);c.fill();
+ if(kind==='coffee'){c.fillStyle='#fff1d0';c.font=`900 ${u*.15}px system-ui,sans-serif`;c.fillText('CAFE',w/2,fy+u*.62)}
+ return cv;
+}
+
+export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){
+ if(kind==='store'||kind==='tea'||kind==='coffee')return spriteSimpleShop(kind,u,dpr,city,brandId);
+ return spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId);
+}
+
+// Café furniture is intentionally one object per tile. The legacy table sprite
+// included chairs in the same texture, so the map view uses these standalone
+// generators for tea and coffee interiors.
+export function spriteTable(u,dpr){
+ const cv=mkc(u,u*1.55,dpr),c=cv.getContext('2d'),lw=Math.max(1.2,u*.035),y=u*.78;
+ ell(c,u/2,u*1.48,u*.34,u*.08);c.fillStyle='rgba(30,20,10,.22)';c.fill();
+ rr(c,u*.14,y,u*.72,u*.2,u*.05);fs(c,'#8a5a36',lw);
+ rr(c,u*.22,y-u*.04,u*.56,u*.12,u*.04);fs(c,'#d9b07a',lw*.8);
+ rr(c,u*.46,y+u*.2,u*.08,u*.4,u*.025);fs(c,'#6b4226',lw*.7);
+ return cv;
+}
+
+export function spriteChair(u,dpr){
+ const cv=mkc(u,u*1.5,dpr),c=cv.getContext('2d'),lw=Math.max(1.2,u*.035);
+ ell(c,u/2,u*1.44,u*.3,u*.07);c.fillStyle='rgba(30,20,10,.2)';c.fill();
+ rr(c,u*.23,u*.24,u*.54,u*.28,u*.06);fs(c,'#a8743f',lw);
+ rr(c,u*.28,u*.5,u*.44,u*.16,u*.04);fs(c,'#c99060',lw*.8);
+ c.strokeStyle='#6b4226';c.lineWidth=lw*.8;c.beginPath();c.moveTo(u*.32,u*.64);c.lineTo(u*.28,u*1.3);c.moveTo(u*.68,u*.64);c.lineTo(u*.72,u*1.3);c.stroke();
+ return cv;
+}

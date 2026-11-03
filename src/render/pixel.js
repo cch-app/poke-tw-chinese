@@ -20,6 +20,11 @@ export const PALETTE = Object.values(COLORS).flat();
 const RGB = PALETTE.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
 /** 美術的一格是 16 點 */
 export const ART_TILE = 16;
+// The main branch renders vector art at display resolution. Keep the pixel
+// pipeline available for comparison with ?renderStyle=pixel, but make smooth
+// rendering the default so outlines are anti-aliased like the baseline game.
+export const SMOOTH_RENDER = typeof location === 'undefined'
+  || new URLSearchParams(location.search).get('renderStyle') !== 'pixel';
 
 // 最接近的顏色：依人眼對紅綠藍的敏感度加權（redmean），色相比較不會跑掉
 const cache = new Map();
@@ -121,6 +126,7 @@ function upscale(low, texts, tk, k) {
  */
 export function pixelMaker(make) {
   return (arg, U, DPR) => {
+    if (SMOOTH_RENDER) return make(arg, U, DPR);
     const k = Math.max(1, Math.round(U * DPR / ART_TILE));
     const { cv, texts } = withCapture(() => make(arg, ART_TILE * SS, 1));
     return upscale(quantize(shrink(cv, Math.round(cv.width / SS), Math.round(cv.height / SS))), texts, k / SS, k);
@@ -141,6 +147,18 @@ function withCapture(fn) {
 
 /** 地面：整張地圖一起處理；倍數 k 由 view 給的解析度決定 */
 export function pixelGround(paint, U, gd, { native = false } = {}) {
+  if (SMOOTH_RENDER) {
+    if (!native) return paint(U, gd);
+    const cv = paint(ART_TILE, 1);
+    const scale = U * gd / ART_TILE;
+    const out = document.createElement('canvas');
+    out.width = Math.max(1, Math.round(cv.width * scale));
+    out.height = Math.max(1, Math.round(cv.height * scale));
+    const g = out.getContext('2d');
+    g.imageSmoothingEnabled = true;
+    g.drawImage(cv, 0, 0, out.width, out.height);
+    return out;
+  }
   const k = Math.max(1, Math.round(U * gd / ART_TILE));
   if (native) { const { cv, texts } = withCapture(() => paint(ART_TILE, 1)); return upscale(cv, texts, k, k) }
   const { cv, texts } = withCapture(() => paint(ART_TILE * SS, 1));
@@ -152,6 +170,16 @@ export function pixelGround(paint, U, gd, { native = false } = {}) {
  * draw(g, w, h) 用 CSS 像素座標作畫；實際先畫在 1/px 大小的小畫布上。
  */
 export function renderPixel(target, cssW, cssH, dpr, px, draw) {
+  if (SMOOTH_RENDER) {
+    const W = Math.round(cssW * dpr), H = Math.round(cssH * dpr);
+    if (target.width !== W || target.height !== H) { target.width = W; target.height = H }
+    const out = target.getContext('2d');
+    out.setTransform(dpr, 0, 0, dpr, 0, 0);
+    out.imageSmoothingEnabled = true;
+    out.clearRect(0, 0, cssW, cssH);
+    draw(out, cssW, cssH);
+    return;
+  }
   const lw = Math.ceil(cssW / px), lh = Math.ceil(cssH / px);
   const { cv: big, g, texts } = lowCanvas(lw * SS, lh * SS);
   g.setTransform(SS / px, 0, 0, SS / px, 0, 0);
@@ -169,6 +197,7 @@ export function renderPixel(target, cssW, cssH, dpr, px, draw) {
 
 /** HTML 裡的 SVG（徽章）：把每個顏色換成調色盤裡最接近的一色 */
 export function paletteMarkup(markup) {
+  if (SMOOTH_RENDER) return markup;
   return markup
     .replace(/#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g, h => inkFor(h))
     .replace(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/g, (_, r, g, b) => nearestCss(+r, +g, +b));

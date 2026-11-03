@@ -3,13 +3,13 @@
 import { CITIES } from '../data/index.js';
 import {
   OUT, GT, BLD, FEX, rr, mkc, paintInterior,
-  spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, drawChar, emblemImage,
+  spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, spriteTable, spriteChair, drawChar, emblemImage,
 } from '../art.js';
 import { COLORS, pixelGround, pixelMaker as px } from '../render/pixel.js';
 import { paintPixelTown, tallGrass } from '../art/pixel-tiles.js';
 
 // 美術一格 16 點；畫面上的格子取 16 的倍數，像素才會整齊
-const tileStep = (v, a, b) => Math.max(a, Math.min(b, Math.round(v / 16) * 16));
+const tileStep = (v, a, b) => Math.max(a, Math.min(b, v));
 const BG_TOWN = COLORS.green[1], BG_IN = COLORS.ink[0];
 
 /* ---------- 徽章圖（SVG 載入完要重畫道館） ---------- */
@@ -41,6 +41,8 @@ const makeLamp = px((_, u, dpr) => spriteLamp(u, dpr));
 const makeSign = px((col, u, dpr) => spriteSign(u, dpr, col));
 const makeArch = px((_, u, dpr) => spriteArch(u, dpr, cur.city));
 const makeFurn = px((f, u, dpr) => spriteFurn(f, cur.map.bk, u, dpr, cur.city));
+const makeTable = px((_, u, dpr) => spriteTable(u, dpr));
+const makeChair = px((_, u, dpr) => spriteChair(u, dpr));
 const makeGrass = px((_, u, dpr) => { const c = mkc(u, u, dpr); tallGrass(c.getContext('2d'), 0, 0, true); return c });
 const makeShimmer = (_, u, dpr) => { const c = mkc(u * .34, u * .08, dpr), g = c.getContext('2d');
   g.strokeStyle = COLORS.blue[3]; g.lineWidth = u * .04; g.lineCap = 'round'; g.beginPath(); g.moveTo(u * .02, u * .04); g.lineTo(u * .32, u * .04); g.stroke(); return c };
@@ -122,7 +124,8 @@ export function describeMap(v, now, st) {
   }
   if (map.kind === 'in') {
     for (const f of map.furn) { if (f.t === 'platform') continue; const ex = FEX[f.t] || .5, by = (f.y + f.h) * U;
-      v.sprite(keyOf(f, f => `f-${f.t}${f.w}x${f.h}-${f.x},${f.y}`), makeFurn, f, f.x * U, by - (f.h + ex) * U, f.w * U, (f.h + ex) * U, by - .5) }
+      const make = f.t === 'table' ? makeTable : f.t === 'chair' ? makeChair : makeFurn;
+      v.sprite(keyOf(f, f => `f-${f.t}${f.w}x${f.h}-${f.x},${f.y}`), make, f, f.x * U, by - (f.h + ex) * U, f.w * U, (f.h + ex) * U, by - .5) }
     for (const n of map.walkers || []) { const ty = posY(n); drawActor(v, posX(n), ty, n.look, n.dir, stepOf(n), (ty + 1) * U) }
   }
   for (const n of map.npcs || []) drawActor(v, n.x, n.y, n.look, n.dir, 0, (n.y + 1) * U);

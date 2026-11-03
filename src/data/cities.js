@@ -235,9 +235,9 @@ export const UI={
  noVoice:['這台裝置沒有臺灣華語語音，所以改顯示文字（經驗減半）。',"No Taiwan Mandarin voice on this device, so the sentence is shown instead (half EXP).","この端末には台湾華語の音声がないため、文を表示します（経験値半分）。"],
  tooEasy:['太簡單了，經驗變少',"Too easy: less EXP","簡単すぎ：経験値ダウン"],bonus:['挑戰成功，額外經驗！',"Tough one: bonus EXP!","難問クリア：経験値ボーナス！"],levelUp:['升級了！',"Level up!","レベルアップ！"],
  tired:['疲勞度',"stamina","スタミナ"],faint:['你累倒了……',"You're exhausted…","力尽きた……"],faintMsg:['你被送回旅館休息。',"You were taken back to the inn to rest.","旅館に運ばれて休んだ。"],
- inn:['旅館',"Inn","旅館"],rest:['休息',"Rest","休む"],store:['超商',"Convenience store","コンビニ"],tea:['茶飲店',"Tea stand","ドリンクスタンド"],temple:['廟',"Temple","廟"],house:['民宅',"House","民家"],gym:['道館',"Gym","ジム"],
+ inn:['旅館',"Inn","旅館"],rest:['休息',"Rest","休む"],store:['超商',"Convenience store","コンビニ"],tea:['茶飲店',"Tea stand","ドリンクスタンド"],coffee:['咖啡店',"Coffee shop","カフェ"],temple:['廟',"Temple","廟"],house:['民宅',"House","民家"],gym:['道館',"Gym","ジム"],
  buy:['買東西',"Buy","買う"],use:['使用',"Use","使う"],leave:['離開',"Leave","立ち去る"],answer:['回答問題',"Answer","問題に答える"],feed:['餵零食',"Feed a treat","おやつをあげる"],
- snack:['寵物零食',"Pet treat","ペットのおやつ"],drink:['能量飲料',"Energy drink","エナジードリンク"],bubble:['珍珠奶茶',"Bubble tea","タピオカミルクティー"],
+ snack:['寵物零食',"Pet treat","ペットのおやつ"],drink:['能量飲料',"Energy drink","エナジードリンク"],bubble:['珍珠奶茶',"Bubble tea","タピオカミルクティー"],coffee:['咖啡',"Coffee","コーヒー"],
  league:['語言大聯盟',"Language League","言語大リーグ"],newGame:['開始新旅程',"New journey","新しい旅を始める"],cont:['繼續旅程',"Continue","続きから"],name:['你的名字',"Your name","あなたの名前"],
  ruby:['標音',"Reading aid","読み方"],pinyin:['拼音',"Pinyin","ピンイン"],zhuyin:['注音',"Zhuyin","注音"],off:['不顯示',"Off","表示しない"],lang:['說明語言',"Help language","説明の言語"],
  voice:['臺灣華語語音',"Taiwan Mandarin voice","台湾華語の音声"],speed:['語速',"Speed","速さ"],reset:['重新開始',"New game","はじめから"],locked:['未解鎖',"Locked","未開放"],
@@ -255,7 +255,7 @@ export const UI={
  welcome:['歡迎光臨！',"Welcome!","いらっしゃいませ！"],items:['道具',"Items","アイテム"],none:['沒有',"None","なし"],words:['單字',"words","単語"],
  innHello:['歡迎來到旅館！要休息一下嗎？',"Welcome to the inn! Would you like to rest?","旅館へようこそ！休んでいきますか？"],
  storeHello:['歡迎光臨！要買什麼？',"Welcome! What would you like?","いらっしゃいませ！何にしますか？"],
- teaHello:['要喝什麼？半糖少冰嗎？',"What'll it be? Half sugar, less ice?","何にする？甘さ半分、氷少なめ？"],
+ teaHello:['要喝什麼？半糖少冰嗎？',"What'll it be? Half sugar, less ice?","何にする？甘さ半分、氷少なめ？"],coffeeHello:['來杯咖啡嗎？提神又能帶來一點好運。',"A coffee? It wakes you up and brings a little luck.","コーヒーはいかが？目が覚めて、少し運もよくなるよ。"],
  templeHello:['拜拜以後，心情會比較平靜。',"After praying, your mind feels calmer.","お参りすると、心が落ち着く。"],
  shopDesc:['零食可以馴養動物，飲料可以恢復疲勞度。',"Snacks help you tame animals; drinks restore stamina.","おやつは動物となかよくなるのに使い、ドリンクはスタミナを回復します。"],
   gender:['角色',"Character","キャラクター"],boy:['男生',"Boy","男の子"],girl:['女生',"Girl","女の子"],guard:['道館守護人員想要對戰！',"A gym guard wants to battle!","ジムトレーナーが勝負をしかけてきた！"],
@@ -276,7 +276,7 @@ export const UI={
 };
 export const FORTUNES=[['大吉',"Great blessing! You found a snack.","大吉！おやつを見つけた。"],['中吉',"Good luck: your next battle will go well.","中吉：次のバトルはうまくいくよ。"],['小吉',"A little luck: keep practicing!","小吉：練習を続けよう！"],['吉',"Good fortune: rest well tonight.","吉：今夜はよく休もう。"]];
 
-export const UNIT={snack:'包',drink:'瓶',bubble:'杯'};
+export const UNIT={snack:'包',drink:'瓶',bubble:'杯',coffee:'杯'};
 export const WALKER_LINES=[
  ['這家店的東西還不錯。',"The stuff in this shop is pretty good.","この店の品物はなかなかいいよ。"],
  ['我每天都來這裡。',"I come here every day.","毎日ここに来るんだ。"],

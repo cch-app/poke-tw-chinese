@@ -14,7 +14,7 @@ export function createCanvasBackend(canvas) {
     begin(clear, x, y, w, h) {
       cx = x; cy = y; vw = w; vh = h;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = true;
       ctx.globalAlpha = 1;
       ctx.fillStyle = clear;
       ctx.fillRect(0, 0, w, h);
