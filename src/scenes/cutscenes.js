@@ -4,6 +4,7 @@ import { $, esc } from '../core/util.js';
 import { CITIES, TW_PTS } from '../data/index.js';
 import { LI, T, Z, rb } from '../i18n.js';
 import { playerLook } from '../world/looks.js';
+import { renderPixel } from '../render/pixel.js';
 
 function planeTop(g,x,y,s,ang){g.save();g.translate(x,y);g.rotate(ang);const lw=Math.max(1.5,s*.05);
  g.save();g.translate(s*.25,s*.45);g.globalAlpha=.25;g.fillStyle='#0b2a4a';ell(g,0,0,s*1,s*.2);g.fill();g.beginPath();g.moveTo(-s*.1,0);g.lineTo(-s*.5,-s*.9);g.lineTo(-s*.25,-s*.9);g.lineTo(s*.3,0);g.lineTo(-s*.25,s*.9);g.lineTo(-s*.5,s*.9);g.closePath();g.fill();g.restore();
@@ -55,14 +56,13 @@ function landScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,0,h,['#7cc6ff','#cfeeff','
  if(p>.86){const q=(p-.86)/.14;const px=x+s*.9+q*s*1.6;drawChar(g,px,ry+s*.05,s*.75,playerLook(),'right',Math.floor(t/150)%2?1:-1)}}
 export function flight(done){const ov=document.createElement('div');ov.className='fly';
  ov.innerHTML=`<canvas></canvas><div class="card flycap" id="flyCap"></div><button class="hbtn" id="flySkip">${Z('skip')} <span class="tl" style="display:inline">${T('skip')}</span></button>`;document.body.appendChild(ov);
- const c=ov.querySelector('canvas'),g=c.getContext('2d'),t0=performance.now(),DUR=8200,M=3800;let end=false,cs=-1;
+ const c=ov.querySelector('canvas'),t0=performance.now(),DUR=8200,M=3800;let end=false,cs=-1;
  const cl=Array.from({length:10},()=>({x:Math.random(),y:Math.random(),s:.5+Math.random(),v:.03+Math.random()*.05}));
  const finish=()=>{if(end)return;end=true;ov.style.opacity=0;setTimeout(()=>{ov.remove();done()},450)};
  ov.querySelector('#flySkip').onclick=finish;ov.querySelector('#flySkip').focus();
  const caps=[['從國外飛往臺灣……',"Flying to Taiwan from abroad…","海外から台湾へ向かっています……"],['歡迎來到桃園國際機場！',"Welcome to Taoyuan International Airport!","桃園国際空港へようこそ！"]];
  const frame=now=>{if(end)return;const t=Math.max(0,now-t0),w=c.clientWidth,h=c.clientHeight,d=Math.min(2,window.devicePixelRatio||1);
-  if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}g.setTransform(d,0,0,d,0,0);
-  if(t<M)mapScene(g,w,h,t/M,cl,t);else landScene(g,w,h,Math.min(1,(t-M)/(DUR-M-600)),cl,t);
+  renderPixel(c,w,h,d,4,g=>{if(t<M)mapScene(g,w,h,t/M,cl,t);else landScene(g,w,h,Math.min(1,(t-M)/(DUR-M-600)),cl,t)});
   const st=t<M?0:1;if(st!==cs){cs=st;$('#flyCap').innerHTML=`${rb(caps[st][0])}<span class="tl">${esc(caps[st][LI()])}</span>`}
   if(t>=DUR)return finish();requestAnimationFrame(frame)};requestAnimationFrame(frame)}
 function taxiDraw(g,x,y,s,t){const lw=Math.max(1.5,s*.018),bob=Math.sin(t/90)*s*.008;g.save();g.translate(x,y+bob);
@@ -100,10 +100,10 @@ export function travelAnim(ci,done){const city=CITIES[ci],island=!!city.island;c
  ov.innerHTML=`<canvas></canvas><div class="card flycap" id="flyCap"></div><button class="hbtn" id="flySkip">${Z('skip')} <span class="tl" style="display:inline">${T('skip')}</span></button>`;document.body.appendChild(ov);
  const cap=island?[`先搭計程車，再坐${city.id==='penghu'?'船':'飛機'}前往${city.zh}……`,`Taxi, then ${city.id==='penghu'?'a ferry':'a flight'} to ${city.en}…`,`タクシーと${city.id==='penghu'?'フェリー':'飛行機'}で${city.ja}へ……`]:[`搭計程車前往${city.zh}……`,`Taking a taxi to ${city.en}…`,`タクシーで${city.ja}へ……`];
  $('#flyCap').innerHTML=`${rb(cap[0])}<span class="tl">${esc(cap[LI()])}</span>`;
- const c=ov.querySelector('canvas'),g=c.getContext('2d'),t0=performance.now(),DUR=6200;let end=false;const cl=Array.from({length:10},()=>({x:Math.random(),y:Math.random()*.7,s:.5+Math.random(),v:.03+Math.random()*.05}));
+ const c=ov.querySelector('canvas'),t0=performance.now(),DUR=6200;let end=false;const cl=Array.from({length:10},()=>({x:Math.random(),y:Math.random()*.7,s:.5+Math.random(),v:.03+Math.random()*.05}));
  const finish=()=>{if(end)return;end=true;ov.style.opacity=0;setTimeout(()=>{ov.remove();done()},450)};ov.querySelector('#flySkip').onclick=finish;ov.querySelector('#flySkip').focus();
  const frame=now=>{if(end)return;const t=Math.max(0,now-t0),w=c.clientWidth,h=c.clientHeight,d=Math.min(2,window.devicePixelRatio||1);
-  if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}g.setTransform(d,0,0,d,0,0);const p=Math.min(1,t/DUR);
-  if(island&&p>.5)skyScene(g,w,h,p,t,cl);else taxiScene(g,w,h,island?p*2*.7:p,t,city);
-  rr(g,w*.2,h-30-Math.max(0,0),w*.6,10,5);g.fillStyle='rgba(255,255,255,.7)';g.fill();rr(g,w*.2,h-30,w*.6*p,10,5);g.fillStyle='#ff5b4a';g.fill();
+  const p=Math.min(1,t/DUR);
+  renderPixel(c,w,h,d,4,g=>{if(island&&p>.5)skyScene(g,w,h,p,t,cl);else taxiScene(g,w,h,island?p*2*.7:p,t,city);
+   g.fillStyle='#ffffff';g.fillRect(w*.2,h-30,w*.6,12);g.fillStyle='#1b2340';g.fillRect(w*.2,h-30,w*.6*p,12)});
   if(t>=DUR)return finish();requestAnimationFrame(frame)};requestAnimationFrame(frame)}

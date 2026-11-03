@@ -1,6 +1,7 @@
 // ===== 繪圖：地面、樹、建築、人物、動物、徽章 =====
 import { CITIES } from './data/index.js';
 import { storeBrand } from './data/stores.js';
+import { paletteMarkup } from './render/pixel.js';
 import { settings } from './state.js';
 import { segment, toMark, toZhu } from './text.js';
 
@@ -107,34 +108,8 @@ export function spriteArch(u,dpr,city){const w=4*u,h=2.6*u;const cv=mkc(w,h,dpr)
 
 /* ---------- 建築 ---------- */
 export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:.7},tea:{w:4,h:3,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
-// A readable façade kit: one roof plane, one front wall, a small number of
-// windows, and one guaranteed entrance. Detailed interior gameplay remains
-// unchanged; this keeps every city building legible at the map's scale.
-function spriteSimpleBuilding(kind,u,dpr,city,brandId){
- const b=BLD[kind],w=b.w*u,h=(b.h+b.ex)*u,cv=mkc(w,h,dpr),c=cv.getContext('2d'),lw=Math.max(1.4,u*.035);
- const body={gym:'#e7edf1',inn:'#ead8bb',store:'#eef1f2',tea:'#b98253',temple:'#b63b32',house:'#d8d2c5'}[kind]||'#e7edf1';
- const roof=kind==='temple'?'#e28b2e':city?.roof||'#7588a8', frontY=kind==='gym'?u*1.42:kind==='store'?u*.72:kind==='tea'?u*.94:u*.84;
- const x=u*.16,right=w-u*.35,bottom=h-u*.08,depth=u*.28;
- c.fillStyle='rgba(18,25,35,.16)';c.fillRect(x+u*.18,bottom-u*.2,w-x,u*.24);
- rr(c,x,frontY,right-x,bottom-frontY,u*.05);fs(c,lg(c,x,frontY,right,frontY,[shade(body,.1),body]),lw);
- c.beginPath();c.moveTo(right,frontY);c.lineTo(w-u*.05,frontY+depth);c.lineTo(w-u*.05,bottom-u*.18);c.lineTo(right,bottom);c.closePath();fs(c,shade(body,-.2),lw);
- c.beginPath();c.moveTo(x,frontY);c.lineTo(x+depth,frontY-depth);c.lineTo(w-u*.28,frontY-depth);c.lineTo(w-u*.05,frontY);c.lineTo(right,frontY+depth);c.lineTo(x,frontY+depth);c.closePath();fs(c,lg(c,x,frontY-depth,x,frontY+depth,[shade(roof,.18),roof,shade(roof,-.15)]),lw);
- const window=(wx,wy,ww,wh)=>{rr(c,wx,wy,ww,wh,u*.035);fs(c,lg(c,wx,wy,wx,wy+wh,['#d6f3ff','#74afd0']),lw*.75);c.fillStyle='rgba(255,255,255,.48)';c.fillRect(wx+ww*.12,wy+wh*.12,ww*.12,wh*.62);c.strokeStyle='rgba(37,40,58,.5)';c.lineWidth=u*.02;c.beginPath();c.moveTo(wx+ww/2,wy);c.lineTo(wx+ww/2,wy+wh);c.stroke()};
- const door=(dw=u*.82,dh=u*1.25)=>{const dx=w/2-dw/2,dy=bottom-dh;rr(c,dx,dy,dw,dh,u*.045);fs(c,lg(c,dx,dy,dx,dy+dh,['#617f9a','#27384f']),lw);c.fillStyle='#f3d267';c.fillRect(dx+dw-u*.1,dy+dh*.55,u*.045,u*.07)};
- const label=kind==='store'?(storeBrand(brandId)?.sign||'超商'):({gym:'道館',inn:'旅館',tea:'茶',temple:'廟',house:'民宅'}[kind]);
- const labelBg=kind==='store'?'#ffffff':kind==='temple'?'#2e7862':city?.roof||'#26394f',labelFg=kind==='store'?(storeBrand(brandId)?.primary||city?.roof||'#1b2340'):'#ffffff';
- rr(c,u*.32,frontY+u*.16,w-u*.82,u*.46,u*.05);fs(c,labelBg,lw*.8);canvasRuby(c,label,w/2,frontY+u*.48,u*(kind==='store'?.2:.24),labelFg);
- if(kind==='gym'){for(let i=0;i<4;i++)window(u*.45+i*(w-u*.9)/4,frontY+u*.78,(w-u*1.1)/4,u*.58)}
- else if(kind==='inn'){for(let i=0;i<3;i++)window(u*.45+i*(w-u*.9)/3,frontY+u*.95,(w-u*1.2)/3,u*.58)}
- else if(kind==='store'){window(u*.42,frontY+u*.78,u*1.05,u*1.35);window(w-u*1.55,frontY+u*.78,u*.82,u*1.35)}
- else if(kind==='house'){window(u*.48,frontY+u*.88,w-u*1.1,u*.65);window(u*.48,frontY+u*1.85,w-u*1.1,u*.65)}
- else if(kind==='tea'){window(u*.48,frontY+u*.8,w-u*1.1,u*.68)}
- else {window(u*.5,frontY+u*.9,u*1.05,u*.66);window(w-u*1.55,frontY+u*.9,u*1.05,u*.66)}
- door(kind==='store'?u*.78:u*.84,kind==='gym'?u*1.35:u*1.2);return cv;
-}
+// 每種建築一眼就認得：屋頂形狀、顏色和大招牌各不相同（地圖上找路靠的就是這些地標）
 export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){
- return spriteSimpleBuilding(kind,u,dpr,city,brandId);
- /* legacy detailed façade retained below as a reference while the simple kit is evaluated. */
  const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
  const door=(cx,dw,dh,col1,col2)=>{rr(c,cx-dw/2,h-dh,dw,dh,u*.06);fs(c,lg(c,0,h-dh,0,h,[col1,col2]),lw);c.beginPath();c.moveTo(cx,h-dh);c.lineTo(cx,h);c.strokeStyle=OUT;c.lineWidth=lw;c.stroke();
   c.fillStyle='rgba(255,255,255,.45)';c.beginPath();c.moveTo(cx-dw/2+u*.08,h-dh+u*.1);c.lineTo(cx-dw/2+u*.22,h-dh+u*.1);c.lineTo(cx-dw/2+u*.08,h-dh+u*.4);c.fill()};
@@ -212,42 +187,36 @@ export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){
   rr(c,w/2-u*.38,h-u*.95,u*.76,u*.95,u*.04);fs(c,'#c4322a',lw);
   c.fillStyle='#ff4a3a';rr(c,w/2-u*.62,h-u*.95,u*.17,u*.85,u*.02);fs(c,'#ff4a3a',lw*.6);rr(c,w/2+u*.45,h-u*.95,u*.17,u*.85,u*.02);fs(c,'#ff4a3a',lw*.6);rr(c,w/2-u*.45,h-u*1.12,u*.9,u*.15,u*.02);fs(c,'#ff4a3a',lw*.6);
   circ(c,w/2+u*.22,h-u*.5,u*.04);c.fillStyle='#ffd35a';c.fill()}
- // A common façade treatment gives every procedural building a consistent 2.5D volume.
- c.save();c.globalCompositeOperation='source-atop';
- const side=lg(c,w-u*.28,0,w,0,['rgba(20,28,42,0)','rgba(20,28,42,.22)']);c.fillStyle=side;c.fillRect(w-u*.32,0,u*.32,h);
- const sun=lg(c,0,0,u*.42,0,['rgba(255,255,255,.22)','rgba(255,255,255,0)']);c.fillStyle=sun;c.fillRect(0,0,u*.42,h);
- c.fillStyle='rgba(15,24,35,.14)';c.fillRect(u*.08,h-u*.13,w-u*.16,u*.13);c.restore();
  return cv}
 
 /* ---------- 人物 ---------- */
 export const SKIN='#ffd9b8';
-export function drawChar(c,cx,fy,s,L,dir,step,noShadow){const lw=Math.max(1.1,s*.028);c.save();c.lineJoin='round';c.lineCap='round';
+export function drawChar(c,cx,fy,s,L,dir,step,noShadow){const lw=Math.max(1.2,s*.035);c.save();c.lineJoin='round';c.lineCap='round';
  if(!noShadow){ell(c,cx,fy-s*.03,s*.3,s*.09);c.fillStyle='rgba(20,30,20,.25)';c.fill()}
  const side=dir==='left'||dir==='right',flip=dir==='left'?-1:1;const bob=step?s*.025:0;
  // legs
- const legY=fy-s*.36,legH=s*.33;
- if(!side){[-1,1].forEach(k=>{const lift=step&&((k<0)===(step>0))?s*.05:0;rr(c,cx+k*s*.085-s*.06,legY-lift,s*.12,legH,s*.045);fs(c,lg(c,cx-s*.16,0,cx+s*.16,0,[shade(L.bottom,.08),L.bottom,shade(L.bottom,-.18)]),lw);rr(c,cx+k*s*.09-s*.075,fy-s*.1-lift,s*.15,s*.085,s*.035);fs(c,L.shoes||'#2b2d47',lw)})}
- else{[-1,1].forEach(k=>{const off=step?k*step*s*.08:0;rr(c,cx+off-s*.06,legY,s*.12,legH,s*.045);fs(c,shade(L.bottom,k<0?-.18:.04),lw);rr(c,cx+off-s*.065+flip*s*.02,fy-s*.1,s*.17,s*.085,s*.035);fs(c,L.shoes||'#2b2d47',lw)})}
- const ty=fy-s*.72-bob;
+ const legY=fy-s*.32,legH=s*.29;
+ if(!side){[-1,1].forEach(k=>{const lift=step&&((k<0)===(step>0))?s*.05:0;rr(c,cx+k*s*.1-s*.07,legY-lift,s*.14,legH,s*.06);fs(c,L.bottom,lw);rr(c,cx+k*s*.1-s*.08,fy-s*.1-lift,s*.16,s*.09,s*.04);fs(c,L.shoes||'#2b2d47',lw)})}
+ else{[-1,1].forEach(k=>{const off=step?k*step*s*.08:0;rr(c,cx+off-s*.07,legY,s*.14,legH,s*.06);fs(c,shade(L.bottom,k<0?-.15:0),lw);rr(c,cx+off-s*.07+flip*s*.02,fy-s*.1,s*.18,s*.09,s*.04);fs(c,L.shoes||'#2b2d47',lw)})}
+ const ty=fy-s*.68-bob;
  if(L.pack&&dir!=='down'){rr(c,cx-(side?flip*s*.32:s*.2)-(side?s*.08:0),ty+s*.06,side?s*.18:s*.4,s*.34,s*.08);fs(c,L.pack,lw)}
  // arms back
  const armSwing=step?step*s*.04:0;
  if(side){rr(c,cx-flip*s*.02-s*.06,ty+s*.06-armSwing,s*.12,s*.3,s*.06);fs(c,shade(L.top,-.2),lw)}
  // torso
- rr(c,cx-(side?s*.15:s*.19),ty,side?s*.3:s*.38,s*.43,s*.1);fs(c,lg(c,cx-s*.22,0,cx+s*.22,0,[shade(L.top,.18),L.top,shade(L.top,-.2)]),lw);
+ rr(c,cx-(side?s*.17:s*.22),ty,side?s*.34:s*.44,s*.4,s*.13);fs(c,lg(c,cx-s*.22,0,cx+s*.22,0,[shade(L.top,.12),L.top,shade(L.top,-.15)]),lw);
  if(L.skirt){c.beginPath();c.moveTo(cx-s*.2,ty+s*.3);c.lineTo(cx+s*.2,ty+s*.3);c.lineTo(cx+s*.27,ty+s*.5);c.lineTo(cx-s*.27,ty+s*.5);c.closePath();fs(c,L.skirt,lw)}
  if(dir==='down'){c.beginPath();c.moveTo(cx-s*.09,ty+s*.01);c.lineTo(cx,ty+s*.1);c.lineTo(cx+s*.09,ty+s*.01);c.strokeStyle=L.trim||'#ffffff';c.lineWidth=s*.04;c.stroke();
   c.beginPath();c.moveTo(cx,ty+s*.1);c.lineTo(cx,ty+s*.38);c.strokeStyle='rgba(0,0,0,.18)';c.lineWidth=s*.02;c.stroke()}
  if(L.pack&&dir==='down'){[-1,1].forEach(k=>{c.beginPath();c.moveTo(cx+k*s*.14,ty+s*.02);c.lineTo(cx+k*s*.12,ty+s*.3);c.strokeStyle=L.pack;c.lineWidth=s*.05;c.stroke()})}
  // arms front
- if(!side){[-1,1].forEach(k=>{const sw=step?k*step*s*.04:0;rr(c,cx+k*s*.235-s*.05,ty+s*.04+sw,s*.1,s*.32,s*.05);fs(c,shade(L.top,k<0 ? 0.04 : -0.14),lw);circ(c,cx+k*s*.235,ty+s*.39+sw,s*.05);fs(c,SKIN,lw)})}
- else{rr(c,cx+flip*s*.025-s*.05,ty+s*.06+armSwing,s*.1,s*.32,s*.05);fs(c,shade(L.top,-.08),lw);circ(c,cx+flip*s*.025,ty+s*.4+armSwing,s*.05);fs(c,SKIN,lw)}
+ if(!side){[-1,1].forEach(k=>{const sw=step?k*step*s*.04:0;rr(c,cx+k*s*.27-s*.06,ty+s*.04+sw,s*.12,s*.3,s*.06);fs(c,shade(L.top,-.08),lw);circ(c,cx+k*s*.27,ty+s*.36+sw,s*.055);fs(c,SKIN,lw)})}
+ else{rr(c,cx+flip*s*.03-s*.06,ty+s*.06+armSwing,s*.12,s*.3,s*.06);fs(c,shade(L.top,-.05),lw);circ(c,cx+flip*s*.03,ty+s*.38+armSwing,s*.055);fs(c,SKIN,lw)}
  // head
- const hy=fy-s*.98-bob,hr=s*.24;
- rr(c,cx-s*.06,hy+hr*.72,s*.12,s*.18,s*.035);fs(c,shade(SKIN,-.06),lw*.7);
+ const hy=fy-s*.98-bob,hr=s*.29;
  if(L.style==='pony'&&dir!=='up'){circ(c,cx-(side?flip*s*.27:0),hy+(side?s*.05:-s*.02)+(dir==='down'?0:0),s*.13);if(dir!=='down')fs(c,L.hair,lw)}
  if(L.style==='long'&&dir!=='up'){rr(c,cx-hr*1.08-(side?flip*hr*.25:0),hy-hr*.3,hr*2.16,hr*1.65,hr*.55);fs(c,L.hair,lw)}
- const skinLight=c.createRadialGradient(cx-hr*.35,hy-hr*.4,hr*.08,cx,hy,hr*1.2);skinLight.addColorStop(0,shade(SKIN,.18));skinLight.addColorStop(.65,SKIN);skinLight.addColorStop(1,shade(SKIN,-.12));circ(c,cx,hy,hr);fs(c,skinLight,lw);
+ circ(c,cx,hy,hr);fs(c,SKIN,lw);
  c.fillStyle=L.hair;c.strokeStyle=OUT;c.lineWidth=lw;
  if(dir==='up'){circ(c,cx,hy-s*.01,hr*1.03);fs(c,L.hair,lw);if(L.style==='pony'){circ(c,cx,hy+s*.12,s*.12);fs(c,shade(L.hair,-.1),lw)}if(L.style==='long'){rr(c,cx-hr*1.02,hy-hr*.1,hr*2.04,hr*1.5,hr*.5);fs(c,L.hair,lw)}}
  else{c.beginPath();if(side){c.moveTo(cx+flip*hr*.55,hy-hr*.75);c.quadraticCurveTo(cx-flip*hr*1.25,hy-hr*1.1,cx-flip*hr*1.02,hy+hr*.45);c.quadraticCurveTo(cx-flip*hr*.5,hy+hr*.25,cx-flip*hr*.15,hy-hr*.05);c.quadraticCurveTo(cx+flip*hr*.4,hy-hr*.25,cx+flip*hr*1.0,hy-hr*.25);c.quadraticCurveTo(cx+flip*hr*.95,hy-hr*.75,cx+flip*hr*.55,hy-hr*.75)}
@@ -331,7 +300,9 @@ export const EMB={
  windlion:'<g>'+Array.from({length:12},(_,i)=>{const a=i/12*Math.PI*2;return`<circle cx="${(50+Math.cos(a)*19).toFixed(1)}" cy="${(42+Math.sin(a)*19).toFixed(1)}" r="7"/>`}).join('')+'</g><circle cx="50" cy="42" r="17"/><g class="cut"><circle cx="44" cy="39" r="3"/><circle cx="56" cy="39" r="3"/><path d="M44 50 Q50 55 56 50" fill="none" stroke-width="3"/></g><path d="M38 60 H62 L64 78 H36Z"/>',
  bluetears:'<path d="M18 58 q8 -10 16 0 t16 0 t16 0 t16 0 V78 H18Z"/><g fill="#bff3ff"><circle cx="28" cy="46" r="3"/><circle cx="44" cy="38" r="2.5"/><circle cx="60" cy="44" r="3.5"/><circle cx="74" cy="34" r="2.5"/><circle cx="36" cy="28" r="2"/><circle cx="66" cy="26" r="2"/></g>'
 };
-export function badgeSVG(ci,got){const c=CITIES[ci];const col=got?c.roof:'#c9cfdd';const id='bg'+ci+(got?'g':'n');
+// 徽章出現在選單裡，顏色換成掌機調色盤
+export const badgeSVG=(ci,got)=>paletteMarkup(badgeRaw(ci,got));
+function badgeRaw(ci,got){const c=CITIES[ci];const col=got?c.roof:'#c9cfdd';const id='bg'+ci+(got?'g':'n');
  let e=EMB[c.emblem]||'';e=e.replace(/class="cut"/g,`fill="${col}" stroke="${col}"`).replace(/class="cutS"/g,`stroke="${col}"`);
  return`<svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade(col,.3)}"/><stop offset="1" stop-color="${shade(col,-.18)}"/></linearGradient></defs>
  <path d="M50 4 L88 22 L88 70 L50 96 L12 70 L12 22Z" fill="${got?'#ffc93c':'#e4e8f1'}" stroke="#1b2340" stroke-width="3"/><path d="M50 12 L81 27 L81 66 L50 88 L19 66 L19 27Z" fill="url(#${id})"/>

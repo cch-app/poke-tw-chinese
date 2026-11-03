@@ -11,6 +11,7 @@ import { playerLook } from '../world/looks.js';
 import { genMap } from '../world/maps.js';
 import { showMap } from '../world/overworld.js';
 import { flight, travelAnim } from './cutscenes.js';
+import { renderPixel } from '../render/pixel.js';
 
 let titleLang=(navigator.language||'').toLowerCase().startsWith('ja')?'ja':'en',titleRuby='pinyin';
 let titleTouched=false,titleGender='m';
@@ -25,7 +26,7 @@ export function titleScreen(){setMode('title');const saved=load();if(saved&&save
   <button class="btn" id="newG" ${saved?'':'data-autofocus'}>${Z('newGame')}<span class="tl">${T('newGame')}</span></button></div>`);
  $('#panel').innerHTML='';$('#ov').hidden=false;const p=$('#panel');p.style.cssText='background:none;border:none;box-shadow:none;display:flex;justify-content:center';p.innerHTML=html;
  p.querySelectorAll('[data-tl]').forEach(b=>b.onclick=()=>{titleTouched=true;titleLang=b.dataset.tl;titleScreen()});p.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{titleTouched=true;titleRuby=b.dataset.tr;titleScreen()});
- p.querySelectorAll('[data-gd]').forEach(b=>b.onclick=()=>{titleGender=b.dataset.gd;titleScreen()});{const gc=$('#gdPrev');if(gc)drawChar(gc.getContext('2d'),60,146,110,playerLook(titleGender),'down',0)}
+ p.querySelectorAll('[data-gd]').forEach(b=>b.onclick=()=>{titleGender=b.dataset.gd;titleScreen()});{const gc=$('#gdPrev');if(gc)renderPixel(gc,60,75,2,3,g=>drawChar(g,30,73,55,playerLook(titleGender),'down',0),{adaptive:true})}
  const c=$('#cont');if(c)c.onclick=()=>{restore(saved);begin(false)};
  $('#newG').onclick=()=>{setPlayer(fresh(($('#nameIn').value||'旅人').trim().slice(0,10)));S.settings.lang=titleLang;S.settings.ruby=titleRuby;S.gender=titleGender;$('#ov').hidden=true;$('#panel').innerHTML='';if(skipFly)begin(true);else flight(()=>begin(true))}}
 function restore(saved){setPlayer(Object.assign(fresh(saved.name),saved));migrate();S.settings=Object.assign(fresh('').settings,saved.settings||{},{lang:titleLang,ruby:titleRuby});S.bag=Object.assign({snack:0,drink:0,bubble:0},saved.bag||{})}

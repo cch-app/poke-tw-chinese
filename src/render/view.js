@@ -19,7 +19,7 @@ export function createView(canvas, backend) {
   const v = {
     U, DPR, cam,
     /** make(arg, U, DPR) 只在快取沒有 key 時呼叫一次，回傳畫布。x、y、w、h 是地圖像素。 */
-    sprite(key, make, arg, x, y, w, h, depth, alpha = 1, effects = 3) {
+    sprite(key, make, arg, x, y, w, h, depth, alpha = 1, effects = 0) {
       let tex = sprites.get(key);
       if (!tex) {
         if (failed.has(key)) return;

@@ -2,14 +2,15 @@
 // 新的物件類型只要在 OBJECTS 加一個項目，不用改繪圖引擎。
 import { CITIES } from '../data/index.js';
 import {
-  OUT, GT, BLD, FEX, rng, rr, mkc, paintGround, paintInterior, drawTallGrass,
+  OUT, GT, BLD, FEX, rr, mkc, paintInterior,
   spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, drawChar, emblemImage,
 } from '../art.js';
-import { enhanceTaoyuanGround } from '../art/taoyuan-kit.js';
+import { PALETTE, pixelGround, pixelMaker as px } from '../render/pixel.js';
+import { paintPixelTown, tallGrass } from '../art/pixel-tiles.js';
 
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const tileStep = (v, a, b) => Math.round(clamp(v, a, b) / 4) * 4;
-const BG_TOWN = '#2f7a3a', BG_IN = '#1b2340';
+// 美術一格 16 點；畫面上的格子取 16 的倍數，像素才會整齊
+const tileStep = (v, a, b) => Math.max(a, Math.min(b, Math.round(v / 16) * 16));
+const BG_TOWN = PALETTE[2], BG_IN = PALETTE[3];
 
 /* ---------- 徽章圖（SVG 載入完要重畫道館） ---------- */
 const emblems = [];
@@ -25,36 +26,33 @@ export function sceneFor(map, onAsset) {
   return {
     w: map.w, h: map.h,
     background: indoor ? BG_IN : BG_TOWN,
-    // Four-pixel increments keep tiles, outlines and camera movement on the same visual grid.
-    tileSize: (vw, vh) => indoor ? tileStep(Math.min(vw / 8.5, vh / 9.5), 40, 72) : tileStep(Math.min(vw / 12, vh / 9), 36, 64),
-    paint: (u, dpr) => {
-      if (indoor) return paintInterior(map, u, dpr, city, img);
-      const canvas = paintGround(map.g, map.ci, u, dpr);
-      return city.id === 'taoyuan' ? enhanceTaoyuanGround(canvas, map.g, u) : canvas;
-    },
+    tileSize: (vw, vh) => indoor ? tileStep(Math.min(vw / 8.5, vh / 9.5), 48, 80) : tileStep(Math.min(vw / 12, vh / 9), 32, 64),
+    // 城鎮地面直接用調色盤畫；室內有家具和招牌字，畫好再收成四色
+    paint: (u, gd) => indoor ? pixelGround((t, d) => paintInterior(map, t, d, city, img), u, gd)
+      : pixelGround(() => paintPixelTown(map.g, map.ci), u, gd, { native: true }),
   };
 }
 
 /* ---------- 貼圖產生器（靜態函式，每格不建立閉包） ---------- */
 const cur = { map: null, city: null, emblem: null };  // 這一格的地圖資訊（給上面的產生器用）
-const makeTree = (kind, u, dpr) => spriteTree(kind, u, dpr);
-const makeBld = (o, u, dpr) => spriteBuilding(o.kind, u, dpr, cur.city, cur.emblem, o.brand);
-const makeLamp = (_, u, dpr) => spriteLamp(u, dpr);
-const makeSign = (col, u, dpr) => spriteSign(u, dpr, col);
-const makeArch = (_, u, dpr) => spriteArch(u, dpr, cur.city);
-const makeFurn = (f, u, dpr) => spriteFurn(f, cur.map.bk, u, dpr, cur.city);
-const makeGrass = (_, u, dpr) => { const c = mkc(u, u, dpr); drawTallGrass(c.getContext('2d'), 0, 0, u, rng(3), true); return c };
+const makeTree = px((kind, u, dpr) => spriteTree(kind, u, dpr));
+const makeBld = px((o, u, dpr) => spriteBuilding(o.kind, u, dpr, cur.city, cur.emblem, o.brand));
+const makeLamp = px((_, u, dpr) => spriteLamp(u, dpr));
+const makeSign = px((col, u, dpr) => spriteSign(u, dpr, col));
+const makeArch = px((_, u, dpr) => spriteArch(u, dpr, cur.city));
+const makeFurn = px((f, u, dpr) => spriteFurn(f, cur.map.bk, u, dpr, cur.city));
+const makeGrass = px((_, u, dpr) => { const c = mkc(u, u, dpr); tallGrass(c.getContext('2d'), 0, 0, true); return c });
 const makeShimmer = (_, u, dpr) => { const c = mkc(u * .34, u * .08, dpr), g = c.getContext('2d');
-  g.strokeStyle = '#fff'; g.lineWidth = u * .04; g.lineCap = 'round'; g.beginPath(); g.moveTo(u * .02, u * .04); g.lineTo(u * .32, u * .04); g.stroke(); return c };
-const makeBubble = (_, u, dpr) => { const c = mkc(u * .5, u * .54, dpr), g = c.getContext('2d'), m = u * .05;
+  g.strokeStyle = PALETTE[0]; g.lineWidth = u * .04; g.lineCap = 'round'; g.beginPath(); g.moveTo(u * .02, u * .04); g.lineTo(u * .32, u * .04); g.stroke(); return c };
+const makeBubble = px((_, u, dpr) => { const c = mkc(u * .5, u * .54, dpr), g = c.getContext('2d'), m = u * .05;
   rr(g, m, m, u * .4, u * .44, u * .12); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OUT; g.stroke();
-  g.fillStyle = '#ff5b4a'; g.font = `900 ${u * .36}px sans-serif`; g.textAlign = 'center'; g.fillText('!', m + u * .2, m + u * .34); return c };
-const makeStepDust = (_, u, dpr) => { const cv = mkc(u, u * .32, dpr), g = cv.getContext('2d');
+  g.fillStyle = '#ff5b4a'; g.font = `900 ${u * .36}px sans-serif`; g.textAlign = 'center'; g.fillText('!', m + u * .2, m + u * .34); return c });
+const makeStepDust = px((_, u, dpr) => { const cv = mkc(u, u * .32, dpr), g = cv.getContext('2d');
   g.lineCap = 'round'; g.strokeStyle = 'rgba(92,77,57,.52)'; g.lineWidth = Math.max(1, u * .035);
-  [[.2,.2,.12],[.42,.12,.09],[.68,.18,.13],[.82,.1,.07]].forEach(([x,y,r]) => { g.beginPath(); g.arc(x*u,y*u,r*u,Math.PI*1.05,Math.PI*1.85); g.stroke() }); return cv };
-const makeGrassKick = (_, u, dpr) => { const cv = mkc(u, u * .46, dpr), g = cv.getContext('2d');
+  [[.2,.2,.12],[.42,.12,.09],[.68,.18,.13],[.82,.1,.07]].forEach(([x,y,r]) => { g.beginPath(); g.arc(x*u,y*u,r*u,Math.PI*1.05,Math.PI*1.85); g.stroke() }); return cv });
+const makeGrassKick = px((_, u, dpr) => { const cv = mkc(u, u * .46, dpr), g = cv.getContext('2d');
   g.lineCap = 'round'; [['#287a38',.22,-.16],['#45a64b',.42,.12],['#67c75a',.62,-.08],['#369342',.8,.15]].forEach(([col,x,lean]) => {
-    g.strokeStyle = col; g.lineWidth = u * .06; g.beginPath(); g.moveTo(x*u,u*.43); g.quadraticCurveTo((x+lean*.4)*u,u*.22,(x+lean)*u,u*.06); g.stroke() }); return cv };
+    g.strokeStyle = col; g.lineWidth = u * .06; g.beginPath(); g.moveTo(x*u,u*.43); g.quadraticCurveTo((x+lean*.4)*u,u*.22,(x+lean)*u,u*.06); g.stroke() }); return cv });
 
 /* ---------- 人物：每種外觀×方向×步伐一張貼圖 ---------- */
 const DIR_I = { up: 0, down: 1, left: 2, right: 3 };
@@ -66,14 +64,14 @@ function charSprite(look, dir, step) {
   const i = DIR_I[dir] * 3 + step + 1;
   return a.v[i] || (a.v[i] = { key: `char-${a.id}-${dir}${step}`, look, dir, step });
 }
-const makeChar = (c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr);
-  drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv };
+const makeChar = px((c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr);
+  drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv }, { adaptive: true });
 function drawActor(v, tx, ty, look, dir, step, depth) {
   const U = v.U, s = U * 1.05, w = s * 1.4, top = s * 1.75, c = charSprite(look, dir, step);
   v.sprite(c.key, makeChar, c, (tx + .5) * U - w / 2, (ty + 1) * U - U * .06 - top, w, top + s * .1, depth);
 }
 // Lighting/shadow flags are interpreted by the WebGL backend. The Canvas fallback safely ignores them.
-const FX_NONE = 0, FX_LIGHT = 1;
+const FX_NONE = 0, FX_LIGHT = FX_NONE;  // 像素風不打光、不投影
 function grassFront(v, x, y, depth) { v.sprite('tgf', makeGrass, null, x * v.U, y * v.U, v.U, v.U, depth, 1, FX_LIGHT) }
 const stepOf = n => !n.mv || n.mv.t <= .18 || n.mv.t >= .82 ? 0 : n.mv.t < .5 ? -1 : 1;
 const posX = n => n.mv ? n.mv.fx + (n.mv.tx - n.mv.fx) * n.mv.t : n.x;
@@ -107,7 +105,10 @@ export function describeMap(v, now, st) {
   const x1 = Math.min(map.w - 1, Math.ceil((v.cam.x + v.cam.w) / U)), y1 = Math.min(map.h - 1, Math.ceil((v.cam.y + v.cam.h) / U));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (map.g[y][x] === GT.WA) {
     const ph = (now / 500 + x * .7 + y * 1.3) % (Math.PI * 2);
-    v.sprite('shimmer', makeShimmer, null, x * U + U * .23 + Math.sin(ph) * U * .08, y * U + U * .41, U * .34, U * .08, -1e9, .25 + .25 * Math.sin(ph), FX_NONE);
+    // 掌機沒有半透明：波光一閃一閃，位置對齊美術像素
+    if (Math.sin(ph) < .2) continue;
+    const p = U / 16, sx = Math.round((x * U + U * .23 + Math.cos(ph) * U * .08) / p) * p;
+    v.sprite('shimmer', makeShimmer, null, sx, y * U + U * .44, U * .34, U * .08, -1e9, 1, FX_NONE);
   }
 
   for (const o of map.objs) { const f = OBJECTS[o.type]; if (f) f(v, o) }
@@ -129,8 +130,8 @@ export function describeMap(v, now, st) {
   const p = st.player, depth = (p.y + 1) * U + .5;
   if (p.moving && p.step) {
     const gx = Math.round(p.x), gy = Math.round(p.y), ground = map.g[gy]?.[gx];
-    if (ground === GT.TG) v.sprite('grass-kick', makeGrassKick, null, (p.x + .5) * U - U * .5, depth - U * .34, U, U * .46, depth - 1, .82, FX_LIGHT);
-    else if (ground === GT.PD || ground === GT.PB) v.sprite('step-dust', makeStepDust, null, (p.x + .5) * U - U * .5, depth - U * .13, U, U * .32, depth - 1, .5, FX_NONE);
+    if (ground === GT.TG) v.sprite('grass-kick', makeGrassKick, null, (p.x + .5) * U - U * .5, depth - U * .34, U, U * .46, depth - 1, 1, FX_NONE);
+    else if (ground === GT.PD || ground === GT.PB) v.sprite('step-dust', makeStepDust, null, (p.x + .5) * U - U * .5, depth - U * .13, U, U * .32, depth - 1, 1, FX_NONE);
   }
   drawActor(v, p.x, p.y, st.look, p.dir, p.step, depth);
   const gx = Math.round(p.x), gy = Math.round(p.y);

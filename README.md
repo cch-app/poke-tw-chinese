@@ -16,7 +16,9 @@
 | `src/ui/` | 對話框、HUD、面板、選單 |
 | `src/scenes/` | 標題畫面、開場與搭車動畫 |
 | `src/render/` | 繪圖引擎，和遊戲內容無關：`view.js`（攝影機、貼圖快取、依深度排序），後端 `backend-webgl.js`（PlayCanvas）與 `backend-canvas.js`（沒有 WebGL 時的備案） |
-| `src/art.js` | 程序美術：用 2D 畫布畫地面、樹、建築、人物、動物、徽章，當成貼圖 |
+| `src/art.js` | 程序美術：用 2D 畫布畫樹、建築、人物、動物、徽章、室內 |
+| `src/art/pixel-tiles.js` | 城鎮地面的像素地塊（草地、石板路、泥土路、高草叢、水），直接用調色盤畫 |
+| `src/render/pixel.js` | 掌機像素風：調色盤 `PALETTE`、把美術畫成每格 16 點再收成四色並整數倍放大；招牌上的字放大後才畫，保持清楚 |
 | `src/text.js`、`src/i18n.js`、`src/speech.js` | 拼音／注音、多語文字、臺灣口音語音 |
 | `src/content.js`、`src/quiz.js`、`src/progress.js` | 題庫整理、出題、經驗值與金錢 |
 | `src/data/` | 題庫與內容 |
@@ -25,6 +27,7 @@
 | `vercel.json` | Vercel 設定（建置、快取與安全性標頭） |
 
 對話框、選單、HUD、對戰畫面和過場動畫是 HTML 與 2D 畫布，疊在地圖畫面上。
+整個遊戲只用四個綠色階（掌機風格）：地圖、對戰、過場動畫的畫布都經過 `src/render/pixel.js` 轉換，CSS 也只用這四個顏色。
 裝置不支援 WebGL 時，地圖會自動改用 2D 畫布繪製；網址加 `?renderer=2d` 可以強制使用。
 地圖上要加新的物件類型，只要在 `src/world/map-view.js` 的 `OBJECTS` 加一個項目。
 

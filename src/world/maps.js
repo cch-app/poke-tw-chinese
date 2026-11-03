@@ -9,63 +9,76 @@ import { CLERK, guardLook, leaderLook, lookFromTrainer } from './looks.js';
 
 const W=24;
 export const H=34;
-const ROAD_VARIANTS=[
- {v:[4,11,12,19],h:[6,14,25],area:'plaza'},
- {v:[2,8,11,12,21],h:[9,18,28],area:'waterfront'},
- {v:[6,11,12,17],h:[5,13,23,30],area:'market'},
- {v:[3,10,11,12,20],h:[7,16,26],area:'park'},
- {v:[5,11,12,18],h:[10,15,24,31],area:'rice'},
-];
-function roadsFor(ci){return ROAD_VARIANTS[ci%ROAD_VARIANTS.length]}
+/*
+ * 城鎮配置：每座城鎮都用同一套整齊的格子。
+ *   y 0      北邊樹牆，只在大路（x 11–12）留入口；y 1 是牌樓
+ *   y 2–6    道館、旅館        y 7–8   第一條街（門口都面向街道）
+ *   y 9–12   超商、茶店、廟、民宅  y 13–14 第二條街
+ *   y 15–32  南邊：小巷與空地、各城特色區、草叢（遇敵），大路一直通到南邊出口
+ * 城市之間的差別放在南邊：第二家超商、民宅、特色區、池塘、樹和草叢的位置。
+ */
+const AVENUE=[11,12],STREETS=[7,8,13,14],LANE=20;
+const CORE=[['gym',2,2],['inn',14,2],['store',1,9],['tea',6,10],['temple',13,9],['house',20,9]];
+// 南邊空地（門口都在第 19 列，前面就是第 20 列的小巷）
+const LOT_W=[1,16],LOT_E1=[15,16],LOT_E2=[19,16];
+const AREAS=['plaza','waterfront','market','park','rice'];
 export function genMap(ci){const r=rng(ci*7919+13),city=CITIES[ci];const g=Array.from({length:H},()=>Array(W).fill(GT.G));const objs=[],doors={};
  const blocked=Array.from({length:H},()=>Array(W).fill(false));
+ const keep=Array.from({length:H},()=>Array(W).fill(false));  // 路、門口：之後的裝飾不能蓋上去
  const block=(x,y)=>{if(blocked[y])blocked[y][x]=true};
- const route=roadsFor(ci);
- // Every town has a different street skeleton. Vertical lanes reaching both
- // map edges form several possible highways to adjacent cities.
- route.v.forEach(x=>{for(let y=0;y<H;y++)g[y][x]=y<16?GT.PB:GT.PD});
- route.h.forEach(y=>{for(let x=1;x<23;x++)if(g[y][x]===GT.G)g[y][x]=GT.PB});
- for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(g[y][x]===GT.PB||g[y][x]===GT.PD)blocked[y][x]=false;
+ const free=(x,y)=>x>0&&x<W-1&&y>0&&y<H-1&&g[y][x]===GT.G&&!blocked[y][x]&&!keep[y][x];
+ const pave=(x,y,t=y<16?GT.PB:GT.PD)=>{g[y][x]=t;keep[y][x]=true};
+ // 道路
+ AVENUE.forEach(x=>{for(let y=0;y<H;y++)pave(x,y)});
+ STREETS.forEach(y=>{for(let x=1;x<W-1;x++)pave(x,y)});
+ // 建築：主要六棟固定位置，南邊空地依城市決定
  const shopR=rng(ci*3571+101),primaryShop=STORE_BRANDS[Math.floor(shopR()*STORE_BRANDS.length)].id;
- const shift=ci%4;
- const bl=[['gym',1+(shift%2),2],['inn',14-(shift%3),2],['store',1+(shift%2),9,primaryShop],['tea',6+(shift%2),10],['temple',13-(shift%2),9],['house',20-(shift%2),9]];
- const hasSecondShop=shopR()<.38;if(hasSecondShop){let second=STORE_BRANDS[Math.floor(shopR()*STORE_BRANDS.length)].id;if(second===primaryShop)second=STORE_BRANDS[(STORE_BRANDS.findIndex(b=>b.id===second)+1)%STORE_BRANDS.length].id;bl.push(['store',1,18,second])}
- // Small neighborhood buildings make each city feel inhabited without
- // turning the town into a wall of façades.
- if(shift===1||shift===3)bl.push(['house',16,17]);
- if(shift===0||ci%5===2)bl.push(['house',20,19]);
+ const bl=CORE.map(([k,x,y])=>k==='store'?[k,x,y,primaryShop]:[k,x,y]);
+ if(shopR()<.38){let second=STORE_BRANDS[Math.floor(shopR()*STORE_BRANDS.length)].id;if(second===primaryShop)second=STORE_BRANDS[(STORE_BRANDS.findIndex(b=>b.id===second)+1)%STORE_BRANDS.length].id;bl.push(['store',...LOT_W,second])}
+ if(ci%4===1||ci%4===3)bl.push(['house',...LOT_E1]);
+ if(ci%4===0||ci%5===2)bl.push(['house',...LOT_E2]);
  bl.forEach(([kind,bx,by,brand])=>{const b=BLD[kind];const o={type:'bld',kind,x:bx,y:by,w:b.w,h:b.h,...(brand&&{brand})};objs.push(o);
-  for(let y=by;y<by+b.h;y++)for(let x=bx;x<bx+b.w;x++)block(x,y);const dx=bx+Math.floor(b.w/2),dy=by+b.h-1;blocked[dy][dx]=false;doors[dx+','+dy]=brand?{kind,brand}:kind;o.door=[dx,dy]});
- g[7][9]=GT.PB;
- [[10,6],[13,6],[10,12],[19,15],[4,15]].forEach(([x,y])=>{objs.push({type:'lamp',x,y});block(x,y)});
- objs.push({type:'sign',x:9,y:6,what:'gym'});block(9,6);
+  for(let y=by;y<by+b.h;y++)for(let x=bx;x<bx+b.w;x++)block(x,y);const dx=bx+Math.floor(b.w/2),dy=by+b.h-1;blocked[dy][dx]=false;keep[dy][dx]=true;doors[dx+','+dy]=brand?{kind,brand}:kind;o.door=[dx,dy];
+  // 門口前面一定有路；南邊的房子再用小巷接回大路
+  if(dy+1!==STREETS[0]&&dy+1!==STREETS[2]){const x0=Math.min(dx,AVENUE[0]),x1=Math.max(dx,AVENUE[1]);for(let x=x0;x<=x1;x++)pave(x,LANE)}});
+ // 路燈、招牌、牌樓（都是實心的）
+ const solid=(o)=>{objs.push(o);block(o.x,o.y)};
+ [[10,6],[13,6],[10,12],[19,15],[4,15]].forEach(([x,y])=>solid({type:'lamp',x,y}));
+ solid({type:'sign',x:9,y:6,what:'gym'});
  objs.push({type:'arch',x:10,y:1});block(10,1);block(13,1);
- // District signatures: each city gets one extra public area in addition to
- // its roads, buildings and grass. The seed keeps the result stable per city.
- const area=route.area;
- const paintArea=(x,y,w,h,t)=>{for(let yy=y;yy<Math.min(H-1,y+h);yy++)for(let xx=x;xx<Math.min(23,x+w);xx++)if(!blocked[yy][xx]){g[yy][xx]=t;if(t===GT.WA)block(xx,yy)}};
- if(area==='plaza'){paintArea(7,16,9,3,GT.PB);[[7,16],[15,16]].forEach(([x,y])=>{objs.push({type:'lamp',x,y});block(x,y)})}
- if(area==='waterfront'){paintArea(16,19,6,3,GT.WA);for(let x=16;x<22;x+=2){objs.push({type:'lamp',x,y:18});block(x,18)}}
- if(area==='market'){paintArea(2,16,6,3,GT.PD);for(let x=3;x<8;x+=2)objs.push({type:'lamp',x,y:15})}
- if(area==='park'){paintArea(15,18,7,4,GT.FL);for(let i=0;i<4;i++){const x=16+i*2;objs.push({type:'tree',x,y:20,kind:city.tree});block(x,20)}}
- if(area==='rice'){paintArea(2,20,6,4,GT.TG);paintArea(16,26,6,3,GT.TG)}
- // 邊界樹; leave every highway mouth open so adjacent cities visibly connect.
- for(let y=0;y<H;y++){[0,23].forEach(x=>{objs.push({type:'tree',x,y,kind:city.tree});block(x,y)})}
- for(let x=1;x<23;x++){if(route.v.includes(x))continue;if(!blocked[0][x]){objs.push({type:'tree',x,y:0,kind:city.tree});block(x,0)}if(!route.v.includes(x)){objs.push({type:'tree',x,y:H-1,kind:city.tree});block(x,H-1)}}
- // 鎮上的空地放花
- for(let i=0;i<14;i++){const x=1+Math.floor(r()*22),y=15+Math.floor(r()*2);if(g[y][x]===GT.G&&!blocked[y][x])g[y][x]=GT.FL}
- // 路線：高草叢
- const patches=[[2,18],[14,18],[3,23],[15,23],[2,28],[14,28],[7,31]];
- patches.forEach(([px,py])=>{const w=3+Math.floor(r()*4),h=2+Math.floor(r()*2);for(let y=py;y<Math.min(H-1,py+h);y++)for(let x=px;x<Math.min(px+w,23);x++)if(x!==11&&x!==12&&!blocked[y][x])g[y][x]=GT.TG});
- // 池塘
- const pond=hasSecondShop?[18,20]:(r()<.5?[18,20]:[3,20]);if(r()<.75)for(let y=pond[1];y<pond[1]+2;y++)for(let x=pond[0];x<pond[0]+3;x++){if(x>0&&x<23){g[y][x]=GT.WA;block(x,y)}}
- // 樹
- for(let i=0;i<16;i++){const x=1+Math.floor(r()*22),y=17+Math.floor(r()*15);if(x>=9&&x<=14)continue;if(g[y][x]===GT.G&&!blocked[y][x]){objs.push({type:'tree',x,y,kind:r()<.25?'broad':city.tree});block(x,y)}}
- for(let i=0;i<10;i++){const x=1+Math.floor(r()*22),y=17+Math.floor(r()*15);if(g[y][x]===GT.G&&!blocked[y][x])g[y][x]=GT.FL}
- // 訓練家
- const spots=shuffle([[10,19,'right'],[13,22,'left'],[10,26,'right'],[13,29,'left'],[8,16,'right'],[15,16,'left'],[10,31,'right']]);
- const trainers=[];const nT=3+(ci>8?1:0);
- for(let k=0;k<nT;k++){const[x,y,dir]=spots[k];g[y][x]=GT.G;blocked[y][x]=false;const cls=Math.floor(r()*TRAINERS.length);
+ // 各城特色區（第 22–26 列，避開小巷）
+ const area=AREAS[ci%AREAS.length];
+ const fillRect=(x,y,w,h,t)=>{for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)if(free(xx,yy)||(t===GT.PB&&keep[yy][xx]&&!blocked[yy][xx]))
+  {if(t===GT.WA){g[yy][xx]=t;block(xx,yy)}else if(t===GT.PB||t===GT.PD)pave(xx,yy,t);else{g[yy][xx]=t;keep[yy][xx]=true}}};
+ if(area==='plaza'){fillRect(7,22,10,3,GT.PB);[[7,22],[16,22],[7,24],[16,24]].forEach(([x,y])=>solid({type:'lamp',x,y}))}
+ if(area==='waterfront'){for(let x=13;x<=21;x++)pave(x,22);fillRect(14,23,8,3,GT.WA);[[15,21],[18,21],[21,21]].forEach(([x,y])=>{if(free(x,y))solid({type:'lamp',x,y})})}
+ if(area==='market'){fillRect(3,22,8,3,GT.PD);[[3,21],[6,21],[9,21]].forEach(([x,y])=>{if(free(x,y))solid({type:'lamp',x,y})})}
+ if(area==='park'){fillRect(15,22,7,4,GT.FL);[16,18,20].forEach(x=>{keep[24][x]=false;solid({type:'tree',x,y:24,kind:city.tree});keep[24][x]=true})}
+ if(area==='rice'){fillRect(2,22,7,4,GT.TG);fillRect(15,23,7,4,GT.TG)}
+ // 邊界樹：東西兩邊整排，南北只在大路留出口
+ for(let y=0;y<H;y++)[0,W-1].forEach(x=>solid({type:'tree',x,y,kind:city.tree}));
+ for(let x=1;x<W-1;x++){if(AVENUE.includes(x))continue;if(!blocked[0][x])solid({type:'tree',x,y:0,kind:city.tree});solid({type:'tree',x,y:H-1,kind:city.tree})}
+ // 街邊花圃
+ for(let i=0;i<14;i++){const x=1+Math.floor(r()*22),y=15+Math.floor(r()*2);if(free(x,y))g[y][x]=GT.FL}
+ // 路線：高草叢（只長在空草地上）
+ const patches=[[2,17],[14,17],[3,27],[15,27],[2,30],[14,30],[6,31]];
+ patches.forEach(([px,py])=>{const w=3+Math.floor(r()*4),h=2+Math.floor(r()*2);for(let y=py;y<Math.min(H-1,py+h);y++)for(let x=px;x<Math.min(px+w,W-1);x++)if(free(x,y))g[y][x]=GT.TG});
+ // 被切成細條的草叢看起來像雜草，清掉（至少要和兩格草叢相連）
+ for(let pass=0;pass<2;pass++)for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(g[y][x]===GT.TG&&!keep[y][x]){
+  const n=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>g[y+dy][x+dx]===GT.TG).length;if(n<2)g[y][x]=GT.G}
+ // 池塘：整塊都是空地才挖；水岸城市已經有湖了
+ const pond=r()<.5?[18,28]:[3,28];
+ if(r()<.75&&area!=='waterfront'){let ok=true;for(let y=pond[1];y<pond[1]+2;y++)for(let x=pond[0];x<pond[0]+3;x++)if(!(free(x,y)||g[y][x]===GT.TG))ok=false;
+  if(ok)for(let y=pond[1];y<pond[1]+2;y++)for(let x=pond[0];x<pond[0]+3;x++){g[y][x]=GT.WA;block(x,y)}}
+ // 樹：離大路遠一點，也不能擋在路上；樹冠有兩格高，不能種在建築正前方
+ const shade=Array.from({length:H},()=>Array(W).fill(false));
+ objs.filter(o=>o.type==='bld').forEach(o=>{for(let y=o.y+o.h;y<o.y+o.h+2&&y<H;y++)for(let x=o.x-1;x<=o.x+o.w;x++)if(shade[y]&&x>=0&&x<W)shade[y][x]=true});
+ for(let i=0;i<16;i++){const x=1+Math.floor(r()*22),y=17+Math.floor(r()*15);if(x>=9&&x<=14||shade[y][x])continue;if(free(x,y))solid({type:'tree',x,y,kind:r()<.25?'broad':city.tree})}
+ for(let i=0;i<10;i++){const x=1+Math.floor(r()*22),y=17+Math.floor(r()*15);if(free(x,y))g[y][x]=GT.FL}
+ // 訓練家：站在大路旁、看著大路
+ const spots=shuffle([[10,19,'right'],[13,22,'left'],[10,26,'right'],[13,29,'left'],[8,16,'right'],[15,16,'left'],[10,31,'right']]).filter(([x,y])=>!blocked[y][x]);
+ const trainers=[];const nT=Math.min(spots.length,3+(ci>8?1:0));
+ for(let k=0;k<nT;k++){const[x,y,dir]=spots[k];if(g[y][x]===GT.TG||g[y][x]===GT.FL)g[y][x]=GT.G;const cls=Math.floor(r()*TRAINERS.length);
   trainers.push({id:ci+'-'+k,x,y,dir,home:dir,cls,lv:cityLv(ci)+1+k,turnT:1500+r()*2500})}
  const innO=objs.find(o=>o.kind==='inn');
  const town={kind:'town',w:W,h:H,ci,g,objs,blocked,doors,trainers,npcs:[],inn:{x:innO.door[0],y:innO.door[1]+1}};return town}

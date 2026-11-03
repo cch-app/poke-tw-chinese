@@ -12,6 +12,7 @@ import { hud } from '../ui/hud.js';
 import { btn, openPanel } from '../ui/panel.js';
 import { playerLook } from '../world/looks.js';
 import { showMap } from '../world/overworld.js';
+import { renderPixel } from '../render/pixel.js';
 
 export let B=null;
 export function startBattle(foe){B={foe,cut:has('cat')?1+Math.floor((petLv('cat')-1)/5):0,done:0,total:foe.total||3,hits:0};
@@ -20,7 +21,9 @@ export function startBattle(foe){B={foe,cut:has('cat')?1+Math.floor((petLv('cat'
   <div class="card bcard mine"><div class="nm">${esc(S.name)} <span class="lv">Lv ${S.lv}</span></div><div class="lbl">${Z('fatigue')} <span id="bFatN"></span></div><div class="bar st" id="bFatBar"><i id="bFat"></i></div></div></div>
   <div class="pbody" id="bbody"></div>`,'battle');
  requestAnimationFrame(drawArena);segs();fatBar()}
-function drawArena(){const c=$('#arenaCv');if(!c||!B)return;const w=c.clientWidth,h=c.clientHeight,d=Math.min(2,window.devicePixelRatio||1);c.width=w*d;c.height=h*d;const g=c.getContext('2d');g.scale(d,d);
+// 對戰場景用一般的顏色畫，再交給 renderPixel 收成掌機四色（每 3 個 CSS 像素一點）
+function drawArena(){const c=$('#arenaCv');if(!c||!B)return;renderPixel(c,c.clientWidth,c.clientHeight,Math.min(2,window.devicePixelRatio||1),3,arenaScene)}
+function arenaScene(g,w,h){
  const city=CITIES[S.city];g.fillStyle=lg(g,0,0,0,h,['#9fd6ff','#e8f6ff']);g.fillRect(0,0,w,h);
  g.fillStyle=shade(city.roof,.55);g.beginPath();g.moveTo(0,h*.55);for(let x=0;x<=w;x+=w/8)g.lineTo(x,h*.42+Math.sin(x*.02)*h*.06);g.lineTo(w,h);g.lineTo(0,h);g.fill();
  g.fillStyle=lg(g,0,h*.55,0,h,['#9fdc7a','#6cbf55']);g.fillRect(0,h*.6,w,h*.4);
@@ -39,7 +42,7 @@ export function askQ(q,next,onAnswer){const body=$('#bbody');const listen=!!q.au
  if(q.qzh)h+=`<div class="qprompt sm">${rb(q.qzh)}</div>`;
  if(q.zh)h+=`<div class="qprompt">${rb(q.zh)}</div>`;
  if(q.tl)h+=`<div class="qprompt tlp">${esc(q.tl)}</div>`;
- if(listen){if(can)h+=`<div class="row"><button class="play" id="playBtn" data-autofocus>▶ ${Z('play')}<span class="tl">${T('play')}</span></button>${has('bird')?`<button class="play" id="slowBtn" style="background:#4a5478">▶ ${Z('slow')}<span class="tl">${T('slow')}</span></button>`:''}</div>`;
+ if(listen){if(can)h+=`<div class="row"><button class="play" id="playBtn" data-autofocus>▶ ${Z('play')}<span class="tl">${T('play')}</span></button>${has('bird')?`<button class="play" id="slowBtn" style="background:var(--ink)">▶ ${Z('slow')}<span class="tl">${T('slow')}</span></button>`:''}</div>`;
   else h+=`<div class="note">${Z('noVoice')}<br>${T('noVoice')}</div>${q.hideText?'':`<div class="qprompt sm">${rb(q.audio)}</div>`}`}
  h+=`<div class="opts">${q.opts.map((o,i)=>`<button class="opt ${q.optZh?'':'tlo'}" data-i="${i}"><span class="k">${i+1}</span><span>${q.optZh?rb(o):esc(o)}</span></button>`).join('')}</div>`;
  if(B.cut)h+=`<div class="row"><button class="btn alt" id="cutBtn">🐾 ${rb('貓的直覺')}<span class="tl">${esc(tr(['',ANIMALS[0].ab[0],ANIMALS[0].ab[1]]))}</span></button></div>`;
