@@ -31,7 +31,7 @@ export function sceneFor(map, onAsset) {
 /* ---------- 貼圖產生器（靜態函式，每格不建立閉包） ---------- */
 const cur = { map: null, city: null, emblem: null };  // 這一格的地圖資訊（給上面的產生器用）
 const makeTree = (kind, u, dpr) => spriteTree(kind, u, dpr);
-const makeBld = (kind, u, dpr) => spriteBuilding(kind, u, dpr, cur.city, cur.emblem);
+const makeBld = (o, u, dpr) => spriteBuilding(o.kind, u, dpr, cur.city, cur.emblem, o.brand);
 const makeLamp = (_, u, dpr) => spriteLamp(u, dpr);
 const makeSign = (col, u, dpr) => spriteSign(u, dpr, col);
 const makeArch = (_, u, dpr) => spriteArch(u, dpr, cur.city);
@@ -53,7 +53,7 @@ function charSprite(look, dir, step) {
   const i = DIR_I[dir] * 3 + step + 1;
   return a.v[i] || (a.v[i] = { key: `char-${a.id}-${dir}${step}`, look, dir, step });
 }
-const makeChar = (c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr); drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step); return cv };
+const makeChar = (c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr); drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv };
 function drawActor(v, tx, ty, look, dir, step, depth) {
   const U = v.U, s = U * 1.05, w = s * 1.4, top = s * 1.75, c = charSprite(look, dir, step);
   v.sprite(c.key, makeChar, c, (tx + .5) * U - w / 2, (ty + 1) * U - U * .06 - top, w, top + s * .1, depth);
@@ -73,7 +73,7 @@ const OBJECTS = {
     if (bx - v.cam.x < -2 * U || bx - v.cam.x > v.cam.w + U || by - v.cam.y < -U || by - v.cam.y > v.cam.h + 3 * U) return;
     v.sprite(keyOf(o, o => 'tree-' + o.kind), makeTree, o.kind, bx + U / 2 - U, by - 2.42 * U, 2 * U, 2.5 * U, by) },
   bld(v, o) { const U = v.U, b = BLD[o.kind], by = (o.y + b.h) * U;
-    v.sprite(keyOf(o, o => 'bld-' + o.kind), makeBld, o.kind, o.x * U, by - (b.h + b.ex) * U, b.w * U, (b.h + b.ex) * U, by) },
+    v.sprite(keyOf(o, o => `bld-${o.kind}-${o.brand || 'local'}`), makeBld, o, o.x * U, by - (b.h + b.ex) * U, b.w * U, (b.h + b.ex) * U, by) },
   lamp(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('lamp', makeLamp, null, o.x * U, by - 2 * U, U, 2 * U, by) },
   sign(v, o) { const U = v.U, by = (o.y + 1) * U;
     v.sprite(keyOf(o, o => 'sign-' + o.what), makeSign, o.what === 'gym' ? cur.city.roof : '#14b3a4', o.x * U, by - 1.12 * U, U, 1.2 * U, by) },

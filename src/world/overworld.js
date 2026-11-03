@@ -52,7 +52,7 @@ function tryMove(dir){S.dir=dir;const[dx,dy]=DIRS[dir];const nx=S.x+dx,ny=S.y+dy
  if(!isWalk(nx,ny))return;mv={fx:S.x,fy:S.y,tx:nx,ty:ny,t:0}}
 function onStep(){stepsSince++;const k=S.x+','+S.y;
  if(MAP.kind==='in'&&S.x===MAP.exit.x&&S.y===MAP.exit.y){held=null;leaveInterior();return}
- if(MAP.doors[k]){held=null;const kind=MAP.doors[k];if(kind==='house'){S.y++;S.dir='down';dialog([UI.houseLocked]);return}enterInterior(kind,S.x,S.y);return}
+ if(MAP.doors[k]){held=null;const dest=MAP.doors[k],kind=typeof dest==='string'?dest:dest.kind;if(kind==='house'){S.y++;S.dir='down';dialog([UI.houseLocked]);return}enterInterior(kind,S.x,S.y,dest.brand);return}
  if(checkSight())return;
  if(MAP.g[S.y][S.x]===GT.TG&&stepsSince>2&&Math.random()<.13){stepsSince=0;held=null;startEncounter()}}
 function sightHits(t){if(S.beaten[t.id])return false;const[dx,dy]=DIRS[t.dir];for(let k=1;k<=4;k++){const x=t.x+dx*k,y=t.y+dy*k;if(x===S.x&&y===S.y)return k;if(x<0||y<0||x>=MAP.w||y>=MAP.h||MAP.blocked[y][x])return false}return false}
@@ -84,6 +84,6 @@ export function travel(ci,arrive){const from=S.city;if(MAP&&MAP.kind==='in')setM
  if(arrive==='top'){S.x=11;S.y=1;S.dir='down'}else if(arrive==='bottom'){S.x=11;S.y=H-2;S.dir='up'}else{S.x=MAP.inn.x;S.y=MAP.inn.y;S.dir='down'}
  mv=null;showMap();save();closePanelQuiet();showCityTag();hud();
  const t=transitLine(from,ci);if(t&&from!==ci)toast(t)}
-function enterInterior(kind,dx,dy){$('#cityTag').style.opacity=0;setTown(MAP);setMap(genInterior(kind,S.city,{x:dx,y:dy+1}));S.x=5;S.y=MAP.h-2;S.dir='up';mv=null;held=null;showMap();
+function enterInterior(kind,dx,dy,brand=null){$('#cityTag').style.opacity=0;setTown(MAP);setMap(genInterior(kind,S.city,{x:dx,y:dy+1},brand));S.x=5;S.y=MAP.h-2;S.dir='up';mv=null;held=null;showMap();
  const nm=kind==='gym'?UI.gym:UI[kind];toast([CITIES[S.city].zh+nm[0],`${CITIES[S.city].en} ${nm[1]}`,`${CITIES[S.city].ja}の${nm[2]}`])}
 function leaveInterior(){if(CH)CH.cancel();$('#dlg').hidden=true;const r=MAP.ret;setMap(TOWN);S.x=r.x;S.y=r.y;S.dir='down';mv=null;held=null;showMap();save()}
