@@ -58,7 +58,9 @@ function drawActor(v, tx, ty, look, dir, step, depth) {
   const U = v.U, s = U * 1.05, w = s * 1.4, top = s * 1.75, c = charSprite(look, dir, step);
   v.sprite(c.key, makeChar, c, (tx + .5) * U - w / 2, (ty + 1) * U - U * .06 - top, w, top + s * .1, depth);
 }
-function grassFront(v, x, y, depth) { v.sprite('tgf', makeGrass, null, x * v.U, y * v.U, v.U, v.U, depth) }
+// Lighting/shadow flags are interpreted by the WebGL backend. The Canvas fallback safely ignores them.
+const FX_NONE = 0, FX_LIGHT = 1;
+function grassFront(v, x, y, depth) { v.sprite('tgf', makeGrass, null, x * v.U, y * v.U, v.U, v.U, depth, 1, FX_LIGHT) }
 const stepOf = n => n.mv && n.mv.t > .25 && n.mv.t < .75 ? 1 : 0;
 const posX = n => n.mv ? n.mv.fx + (n.mv.tx - n.mv.fx) * n.mv.t : n.x;
 const posY = n => n.mv ? n.mv.fy + (n.mv.ty - n.mv.fy) * n.mv.t : n.y;
@@ -91,7 +93,7 @@ export function describeMap(v, now, st) {
   const x1 = Math.min(map.w - 1, Math.ceil((v.cam.x + v.cam.w) / U)), y1 = Math.min(map.h - 1, Math.ceil((v.cam.y + v.cam.h) / U));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (map.g[y][x] === GT.WA) {
     const ph = (now / 500 + x * .7 + y * 1.3) % (Math.PI * 2);
-    v.sprite('shimmer', makeShimmer, null, x * U + U * .23 + Math.sin(ph) * U * .08, y * U + U * .41, U * .34, U * .08, -1e9, .25 + .25 * Math.sin(ph));
+    v.sprite('shimmer', makeShimmer, null, x * U + U * .23 + Math.sin(ph) * U * .08, y * U + U * .41, U * .34, U * .08, -1e9, .25 + .25 * Math.sin(ph), FX_NONE);
   }
 
   for (const o of map.objs) { const f = OBJECTS[o.type]; if (f) f(v, o) }
@@ -101,7 +103,7 @@ export function describeMap(v, now, st) {
     drawActor(v, tx, ty, st.trainerLook(t), t.dir, stepOf(t), depth);
     const gx = Math.round(tx), gy = Math.round(ty);
     if (map.g[gy]?.[gx] === GT.TG) grassFront(v, gx, gy, depth);
-    if (st.bubble && st.bubble.t === t) v.sprite('bubble', makeBubble, null, (tx + .5) * U - U * .25, depth - U * 2.02, U * .5, U * .54, depth);
+    if (st.bubble && st.bubble.t === t) v.sprite('bubble', makeBubble, null, (tx + .5) * U - U * .25, depth - U * 2.02, U * .5, U * .54, depth, 1, FX_NONE);
   }
   if (map.kind === 'in') {
     for (const f of map.furn) { if (f.t === 'platform') continue; const ex = FEX[f.t] || .5, by = (f.y + f.h) * U;

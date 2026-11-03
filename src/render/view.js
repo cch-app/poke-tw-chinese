@@ -19,7 +19,7 @@ export function createView(canvas, backend) {
   const v = {
     U, DPR, cam,
     /** make(arg, U, DPR) 只在快取沒有 key 時呼叫一次，回傳畫布。x、y、w、h 是地圖像素。 */
-    sprite(key, make, arg, x, y, w, h, depth, alpha = 1) {
+    sprite(key, make, arg, x, y, w, h, depth, alpha = 1, effects = 3) {
       let tex = sprites.get(key);
       if (!tex) {
         if (failed.has(key)) return;
@@ -29,7 +29,8 @@ export function createView(canvas, backend) {
       }
       let it = pool[list.length];
       if (!it) it = pool[list.length] = {};
-      it.tex = tex; it.x = x; it.y = y; it.w = w; it.h = h; it.depth = depth; it.alpha = alpha; it.seq = list.length;
+      it.tex = tex; it.x = x; it.y = y; it.w = w; it.h = h; it.depth = depth;
+      it.alpha = alpha; it.effects = effects; it.seq = list.length;
       list.push(it);
     },
   };
@@ -83,8 +84,8 @@ export function createView(canvas, backend) {
       list.sort(byDepth);
 
       backend.begin(bg, cam.x, cam.y, VW, VH);
-      backend.draw(ground, 0, 0, mw, mh, 1);
-      for (const it of list) backend.draw(it.tex, it.x, it.y, it.w, it.h, it.alpha);
+      backend.draw(ground, 0, 0, mw, mh, 1, 0);
+      for (const it of list) backend.draw(it.tex, it.x, it.y, it.w, it.h, it.alpha, it.effects);
       backend.end();
     },
     start: backend.start,

@@ -8,7 +8,7 @@ import {
   PIXELFORMAT_RGBA8, FILTER_LINEAR, ADDRESS_CLAMP_TO_EDGE,
 } from 'playcanvas';
 
-/* ---------- 著色器：貼圖＋透明度（預乘 alpha） ---------- */
+/* ---------- 著色器：貼圖＋柔和的左上方日光（預乘 alpha） ---------- */
 const SHADER = {
   uniqueName: 'worldSprite',
   attributes: { aPosition: SEMANTIC_POSITION, aUv0: SEMANTIC_TEXCOORD0 },
@@ -25,16 +25,36 @@ const SHADER = {
   fragmentGLSL: `
     uniform sampler2D uTex;
     uniform float uOpacity;
+    uniform float uLit;
     varying vec2 vUv;
     void main(void) {
-      gl_FragColor = texture2D(uTex, vUv) * uOpacity;
+      vec4 texel = texture2D(uTex, vUv);
+      float sun = clamp((1.0 - vUv.y) * 0.7 + (1.0 - vUv.x) * 0.3, 0.0, 1.0);
+      float light = mix(1.0, mix(0.88, 1.08, sun), uLit);
+      gl_FragColor = vec4(min(texel.rgb * light, vec3(texel.a)), texel.a) * uOpacity;
+    }`,
+};
+
+/* 把原貼圖的輪廓壓扁在腳下，做成便宜但穩定的接觸陰影。 */
+const SHADOW_SHADER = {
+  uniqueName: 'worldSpriteShadow',
+  attributes: { aPosition: SEMANTIC_POSITION, aUv0: SEMANTIC_TEXCOORD0 },
+  vertexGLSL: SHADER.vertexGLSL,
+  fragmentGLSL: `
+    uniform sampler2D uTex;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    void main(void) {
+      float alpha = texture2D(uTex, vUv).a * uOpacity;
+      vec3 color = vec3(0.055, 0.075, 0.09) * alpha;
+      gl_FragColor = vec4(color, alpha);
     }`,
 };
 
 /** 沒有 WebGL 時會丟出錯誤，由 createBackend() 改用 2D 後端。 */
 export function createWebglBackend(canvas) {
   // 只載入需要的部分（攝影機），整包 Application 會多出好幾 MB
-  const device = new WebglGraphicsDevice(canvas, { alpha: false, antialias: false, depth: false, stencil: false });
+  const device = new WebglGraphicsDevice(canvas, { alpha: false, antialias: true, depth: false, stencil: false });
   if (!device.gl) throw new Error('WebGL unavailable');
   const opts = new AppOptions();
   opts.graphicsDevice = device;
@@ -62,7 +82,7 @@ export function createWebglBackend(canvas) {
   quad.setIndices([0, 1, 2, 0, 2, 3]);
   quad.update();
 
-  const mats = new Map(), colors = new Map(), pool = [];
+  const mats = new Map(), shadowMats = new Map(), colors = new Map(), pool = [];
   let used = 0;
 
   function material(tex) {
@@ -72,6 +92,16 @@ export function createWebglBackend(canvas) {
       m.blendType = BLEND_PREMULTIPLIED; m.depthTest = false; m.depthWrite = false; m.cull = CULLFACE_NONE;
       m.setParameter('uTex', tex); m.update();
       mats.set(tex, m);
+    }
+    return m;
+  }
+  function shadowMaterial(tex) {
+    let m = shadowMats.get(tex);
+    if (!m) {
+      m = new ShaderMaterial(SHADOW_SHADER);
+      m.blendType = BLEND_PREMULTIPLIED; m.depthTest = false; m.depthWrite = false; m.cull = CULLFACE_NONE;
+      m.setParameter('uTex', tex); m.update();
+      shadowMats.set(tex, m);
     }
     return m;
   }
@@ -94,6 +124,8 @@ export function createWebglBackend(canvas) {
     destroyTexture(tex) {
       const m = mats.get(tex);
       if (m) { m.destroy(); mats.delete(tex) }
+      const sm = shadowMats.get(tex);
+      if (sm) { sm.destroy(); shadowMats.delete(tex) }
       tex.destroy();
     },
     resize(cssW, cssH, dpr) { device.maxPixelRatio = dpr; app.updateCanvasSize() },
@@ -103,23 +135,37 @@ export function createWebglBackend(canvas) {
       cam.camera.orthoHeight = h / 2;
       cam.setLocalPosition(cx + w / 2, -(cy + h / 2), 10);
     },
-    draw(tex, x, y, w, h, alpha) {
+    draw(tex, x, y, w, h, alpha, effects = 0) {
       let q = pool[used];
       if (!q) {
         const node = new GraphNode();
         const mi = new MeshInstance(quad, material(tex), node);
+        const shadowNode = new GraphNode();
+        const shadowMi = new MeshInstance(quad, material(tex), shadowNode);
         mi.cull = false;
-        layer.addMeshInstances([mi]);
-        q = pool[used] = { node, mi };
+        shadowMi.cull = false;
+        layer.addMeshInstances([shadowMi, mi]);
+        q = pool[used] = { node, mi, shadowNode, shadowMi };
       }
+      const order = used++ * 2;
+      const castsShadow = (effects & 2) !== 0;
       q.mi.material = material(tex);
-      q.mi.drawOrder = used++;
+      q.mi.drawOrder = order + 1;
       q.mi.visible = true;
       q.mi.setParameter('uOpacity', alpha);
+      q.mi.setParameter('uLit', effects & 1 ? 1 : 0);
       q.node.setLocalPosition(x, -(y + h), 0);
       q.node.setLocalScale(w, h, 1);
+      q.shadowMi.drawOrder = order;
+      q.shadowMi.visible = castsShadow;
+      if (castsShadow) {
+        q.shadowMi.material = shadowMaterial(tex);
+        q.shadowMi.setParameter('uOpacity', alpha * .22);
+        q.shadowNode.setLocalPosition(x + w * .08, -(y + h), 0);
+        q.shadowNode.setLocalScale(w * .92, h * .18, 1);
+      }
     },
-    end() { for (let i = used; i < pool.length; i++) pool[i].mi.visible = false },
+    end() { for (let i = used; i < pool.length; i++) { pool[i].mi.visible = false; pool[i].shadowMi.visible = false } },
     // GPU 重置後貼圖要重畫；PlayCanvas 會自己恢復裝置
     onContextRestored(fn) { device.on('devicerestored', fn) },
     start(onFrame) { app.on('update', () => onFrame(performance.now())); app.start() },
