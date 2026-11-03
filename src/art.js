@@ -3,6 +3,7 @@ import { CITIES } from './data/index.js';
 import { storeBrand } from './data/stores.js';
 import { settings } from './state.js';
 import { segment, toMark, toZhu } from './text.js';
+import { spriteTaoyuanBuilding } from './art/taoyuan-kit.js';
 
 
 export const OUT='#2a2238';
@@ -107,7 +108,8 @@ export function spriteArch(u,dpr,city){const w=4*u,h=2.6*u;const cv=mkc(w,h,dpr)
 
 /* ---------- 建築 ---------- */
 export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:.7},tea:{w:4,h:3,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
-export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
+export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){if(city?.id==='taoyuan')return spriteTaoyuanBuilding(kind,u,dpr,city,emblemImg,brandId);
+ const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
  const door=(cx,dw,dh,col1,col2)=>{rr(c,cx-dw/2,h-dh,dw,dh,u*.06);fs(c,lg(c,0,h-dh,0,h,[col1,col2]),lw);c.beginPath();c.moveTo(cx,h-dh);c.lineTo(cx,h);c.strokeStyle=OUT;c.lineWidth=lw;c.stroke();
   c.fillStyle='rgba(255,255,255,.45)';c.beginPath();c.moveTo(cx-dw/2+u*.08,h-dh+u*.1);c.lineTo(cx-dw/2+u*.22,h-dh+u*.1);c.lineTo(cx-dw/2+u*.08,h-dh+u*.4);c.fill()};
  const win=(x,y,ww,wh,grille)=>{rr(c,x,y,ww,wh,u*.05);fs(c,lg(c,0,y,0,y+wh,['#bfe8ff','#6fb7e6']),lw);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(x+ww*.12,y+wh*.15,ww*.14,wh*.5);

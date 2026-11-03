@@ -5,6 +5,7 @@ import {
   OUT, GT, BLD, FEX, rng, rr, mkc, paintGround, paintInterior, drawTallGrass,
   spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, drawChar, emblemImage,
 } from '../art.js';
+import { drawTaoyuanChar, enhanceTaoyuanGround } from '../art/taoyuan-kit.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const BG_TOWN = '#2f7a3a', BG_IN = '#1b2340';
@@ -24,7 +25,11 @@ export function sceneFor(map, onAsset) {
     w: map.w, h: map.h,
     background: indoor ? BG_IN : BG_TOWN,
     tileSize: (vw, vh) => indoor ? clamp(Math.floor(Math.min(vw / 8.5, vh / 9.5)), 40, 72) : clamp(Math.floor(Math.min(vw / 12, vh / 9)), 34, 64),
-    paint: (u, dpr) => indoor ? paintInterior(map, u, dpr, city, img) : paintGround(map.g, map.ci, u, dpr),
+    paint: (u, dpr) => {
+      if (indoor) return paintInterior(map, u, dpr, city, img);
+      const canvas = paintGround(map.g, map.ci, u, dpr);
+      return city.id === 'taoyuan' ? enhanceTaoyuanGround(canvas, map.g, u) : canvas;
+    },
   };
 }
 
@@ -47,15 +52,16 @@ const makeBubble = (_, u, dpr) => { const c = mkc(u * .5, u * .54, dpr), g = c.g
 const DIR_I = { up: 0, down: 1, left: 2, right: 3 };
 const charSprites = new WeakMap();
 let lookSeq = 0;
-function charSprite(look, dir, step) {
+function charSprite(look, dir, step, style) {
   let a = charSprites.get(look);
   if (!a) { a = { id: ++lookSeq, v: [] }; charSprites.set(look, a) }
-  const i = DIR_I[dir] * 3 + step + 1;
-  return a.v[i] || (a.v[i] = { key: `char-${a.id}-${dir}${step}`, look, dir, step });
+  const i = (style === 'taoyuan' ? 16 : 0) + DIR_I[dir] * 3 + step + 1;
+  return a.v[i] || (a.v[i] = { key: `char-${style}-${a.id}-${dir}${step}`, look, dir, step, style });
 }
-const makeChar = (c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr); drawChar(cv.getContext('2d'), s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv };
+const makeChar = (c, u, dpr) => { const s = u * 1.05, cv = mkc(s * 1.4, s * 1.85, dpr), g = cv.getContext('2d');
+  if (c.style === 'taoyuan') drawTaoyuanChar(g, s * .7, s * 1.75, s, c.look, c.dir, c.step); else drawChar(g, s * .7, s * 1.75, s, c.look, c.dir, c.step, true); return cv };
 function drawActor(v, tx, ty, look, dir, step, depth) {
-  const U = v.U, s = U * 1.05, w = s * 1.4, top = s * 1.75, c = charSprite(look, dir, step);
+  const U = v.U, s = U * 1.05, w = s * 1.4, top = s * 1.75, style = cur.city?.id === 'taoyuan' ? 'taoyuan' : 'default', c = charSprite(look, dir, step, style);
   v.sprite(c.key, makeChar, c, (tx + .5) * U - w / 2, (ty + 1) * U - U * .06 - top, w, top + s * .1, depth);
 }
 // Lighting/shadow flags are interpreted by the WebGL backend. The Canvas fallback safely ignores them.
