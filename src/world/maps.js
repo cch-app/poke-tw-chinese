@@ -13,14 +13,15 @@ export const H=34;
  * 城鎮配置：每座城鎮都用同一套整齊的格子。
  *   y 0      北邊樹牆，只在大路（x 11–12）留入口；y 1 是牌樓
  *   y 2–6    道館、旅館        y 7–8   第一條街（門口都面向街道）
- *   y 9–12   超商、茶店、廟、民宅  y 13–14 第二條街
+ *   y 9–12   超商、茶店、廟、民宅（超商、茶店、咖啡店同為 5×4）  y 13–14 第二條街
  *   y 15–32  南邊：小巷與空地、各城特色區、草叢（遇敵），大路一直通到南邊出口
  * 城市之間的差別放在南邊：第二家超商、民宅、特色區、池塘、樹和草叢的位置。
  */
 const AVENUE=[11,12],STREETS=[7,8,13,14],LANE=20;
 // Every city has the same essential services, plus both a drink stand and a coffee shop.
+// Store, tea and coffee share one 5×4 footprint, so the tea shop fills x 6–10 beside the store.
 // The coffee shop sits in the south district so its entrance has a dedicated approach.
-const CORE=[['gym',2,2],['inn',14,2],['store',1,9],['tea',6,10],['temple',13,9],['coffee',6,15],['house',20,9]];
+const CORE=[['gym',2,2],['inn',14,2],['store',1,9],['tea',6,9],['temple',13,9],['coffee',6,15],['house',20,9]];
 // 南邊空地（門口都在第 19 列，前面就是第 20 列的小巷）
 const LOT_W=[1,16],LOT_E1=[15,16],LOT_E2=[19,16];
 const AREAS=['plaza','waterfront','market','park','rice'];
@@ -29,7 +30,7 @@ export function genMap(ci){const r=rng(ci*7919+13),city=CITIES[ci];const g=Array
  const keep=Array.from({length:H},()=>Array(W).fill(false));  // 路、門口：之後的裝飾不能蓋上去
  const block=(x,y)=>{if(blocked[y])blocked[y][x]=true};
  const free=(x,y)=>x>0&&x<W-1&&y>0&&y<H-1&&g[y][x]===GT.G&&!blocked[y][x]&&!keep[y][x];
- const pave=(x,y,t=y<16?GT.PB:GT.PD)=>{g[y][x]=t;keep[y][x]=true};
+ const pave=(x,y,t=GT.PB)=>{g[y][x]=t;keep[y][x]=true};  // 同一座城所有的路都用同一種路面（樣式由城市決定，見 pixel-tiles.js）
  // 道路
  AVENUE.forEach(x=>{for(let y=0;y<H;y++)pave(x,y)});
  STREETS.forEach(y=>{for(let x=1;x<W-1;x++)pave(x,y)});
@@ -45,7 +46,7 @@ export function genMap(ci){const r=rng(ci*7919+13),city=CITIES[ci];const g=Array
   if(dy+1!==STREETS[0]&&dy+1!==STREETS[2]){const x0=Math.min(dx,AVENUE[0]),x1=Math.max(dx,AVENUE[1]);for(let x=x0;x<=x1;x++)pave(x,LANE)}});
  // 路燈、招牌、牌樓（都是實心的）
  const solid=(o)=>{objs.push(o);block(o.x,o.y)};
- [[10,6],[13,6],[10,12],[19,15],[4,15]].forEach(([x,y])=>solid({type:'lamp',x,y}));
+ [[10,6],[13,6],[13,15],[19,15],[4,15]].forEach(([x,y])=>solid({type:'lamp',x,y}));
  solid({type:'sign',x:9,y:6,what:'gym'});
  objs.push({type:'arch',x:10,y:1});block(10,1);block(13,1);
  // 各城特色區（第 22–26 列，避開小巷）

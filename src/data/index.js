@@ -5,4 +5,4 @@ import { EXTRA } from './extra.js';
 export const CITIES = BASE_CITIES.map((c, i) => ({ ...c, pool: [...c.pool, ...EXTRA[i].pool], read2: EXTRA[i].read2 }));
 
 export { LEAGUE, ANIMALS, TRAINERS, INTRO, UI, FORTUNES, UNIT, WALKER_LINES };
-export { TW_PTS } from './taiwan.js';
+export { TW_PEAKS, TW_PTS, TW_RANGES } from './taiwan.js';

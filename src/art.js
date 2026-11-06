@@ -88,11 +88,20 @@ export function spriteTree(kind,u,dpr){const W2=2*u,H2=2.5*u;const cv=mkc(W2,H2,
 export function mkc(w,h,dpr){const cv=document.createElement('canvas');cv.width=Math.ceil(w*dpr);cv.height=Math.ceil(h*dpr);const c=cv.getContext('2d');c.scale(dpr,dpr);c.lineJoin='round';c.lineCap='round';c.imageSmoothingEnabled=true;cv._w=w;cv._h=h;return cv}
 
 /* ---------- 小物件 ---------- */
-export function spriteLamp(u,dpr){const cv=mkc(u,2*u,dpr),c=cv.getContext('2d'),lw=Math.max(1.2,u*.035),cx=u/2,by=1.92*u;
- ell(c,cx,by-u*.04,u*.2,u*.07);c.fillStyle='rgba(0,0,0,.2)';c.fill();
- rr(c,cx-u*.05,by-u*1.55,u*.1,u*1.5,u*.04);fs(c,'#3d4766',lw);rr(c,cx-u*.12,by-u*.18,u*.24,u*.16,u*.04);fs(c,'#3d4766',lw);
- const gr=c.createRadialGradient(cx,by-u*1.68,0,cx,by-u*1.68,u*.45);gr.addColorStop(0,'rgba(255,230,140,.55)');gr.addColorStop(1,'rgba(255,230,140,0)');c.fillStyle=gr;c.fillRect(0,0,u,u*1.2);
- rr(c,cx-u*.17,by-u*1.86,u*.34,u*.32,u*.1);fs(c,'#fff1b8',lw);c.beginPath();c.moveTo(cx-u*.22,by-u*1.84);c.lineTo(cx,by-u*1.98);c.lineTo(cx+u*.22,by-u*1.84);c.closePath();fs(c,'#3d4766',lw);return cv}
+// 現代歐式路燈：深灰錐形燈柱、腰環、上寬下窄的玻璃燈籠，頂上平帽與尖頂（城鎮、計程車街景、機場共用）
+export function drawEuroLamp(c,x,gy,H){const lw=Math.max(1,H*.022),pw=H*.05,col='#2b3236';
+ rr(c,x-pw*1.5,gy-H*.07,pw*3,H*.07,pw*.4);fs(c,col,lw);
+ c.beginPath();c.moveTo(x-pw*.85,gy-H*.07);c.lineTo(x-pw*.4,gy-H*.78);c.lineTo(x+pw*.4,gy-H*.78);c.lineTo(x+pw*.85,gy-H*.07);c.closePath();fs(c,lg(c,x-pw,0,x+pw,0,['#4a555c',col]),lw);
+ rr(c,x-pw*.95,gy-H*.46,pw*1.9,H*.03,pw*.3);fs(c,'#3d474d',lw*.7);
+ const ly=gy-H*.89,gr=c.createRadialGradient(x,ly,0,x,ly,H*.3);gr.addColorStop(0,'rgba(255,225,150,.5)');gr.addColorStop(1,'rgba(255,225,150,0)');c.fillStyle=gr;c.fillRect(x-H*.3,ly-H*.3,H*.6,H*.6);
+ rr(c,x-pw*1.25,gy-H*.81,pw*2.5,H*.03,pw*.2);fs(c,col,lw*.7);
+ c.beginPath();c.moveTo(x-pw*1.0,gy-H*.79);c.lineTo(x-pw*1.4,gy-H*.97);c.lineTo(x+pw*1.4,gy-H*.97);c.lineTo(x+pw*1.0,gy-H*.79);c.closePath();fs(c,lg(c,0,gy-H*.97,0,gy-H*.79,['#fff6d6','#ffd77a']),lw*.8);
+ c.strokeStyle=col;c.lineWidth=Math.max(1,lw*.6);c.beginPath();c.moveTo(x,gy-H*.97);c.lineTo(x,gy-H*.79);c.stroke();
+ c.beginPath();c.moveTo(x-pw*1.6,gy-H*.97);c.lineTo(x-pw*.6,gy-H*1.03);c.lineTo(x+pw*.6,gy-H*1.03);c.lineTo(x+pw*1.6,gy-H*.97);c.closePath();fs(c,col,lw*.8);
+ circ(c,x,gy-H*1.05,pw*.3);fs(c,col,lw*.5)}
+export function spriteLamp(u,dpr){const cv=mkc(u,2*u,dpr),c=cv.getContext('2d'),by=1.92*u;
+ ell(c,u/2,by-u*.04,u*.22,u*.07);c.fillStyle='rgba(0,0,0,.2)';c.fill();
+ drawEuroLamp(c,u/2,by,u*1.75);return cv}
 export function spriteSign(u,dpr,col){const cv=mkc(u,1.2*u,dpr),c=cv.getContext('2d'),lw=Math.max(1.2,u*.035),by=1.12*u;
  ell(c,u/2,by-u*.03,u*.35,u*.08);c.fillStyle='rgba(0,0,0,.18)';c.fill();
  rr(c,u*.2,by-u*.5,u*.09,u*.48,u*.03);fs(c,'#8c643c',lw);rr(c,u*.71,by-u*.5,u*.09,u*.48,u*.03);fs(c,'#8c643c',lw);
@@ -107,7 +116,10 @@ export function spriteArch(u,dpr,city){const w=4*u,h=2.6*u;const cv=mkc(w,h,dpr)
  canvasRuby(c,city.zh,w/2,h-u*1.33,u*.36,OUT);return cv}
 
 /* ---------- 建築 ---------- */
-export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:.7},tea:{w:4,h:3,ex:1},coffee:{w:5,h:4,ex:.9},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
+// 會冒煙／冒熱氣的出口（相對於建築貼圖左上角，單位是格）：木屋煙囪、茶壺壺嘴、咖啡杯口。
+// 煙是地圖畫面每格即時畫的，不畫在建築貼圖上，才會一直冒出來
+export const VENTS={inn:[{x:4.65,y:.8,kind:'smoke'}],tea:[{x:.34,y:1.62,kind:'steam'}],coffee:[{x:2.05,y:.95,kind:'steam'},{x:2.5,y:.9,kind:'steam'},{x:2.95,y:.95,kind:'steam'}]};
+export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:1},tea:{w:5,h:4,ex:1},coffee:{w:5,h:4,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
 // 每種建築一眼就認得：屋頂形狀、顏色和大招牌各不相同（地圖上找路靠的就是這些地標）
 function spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId){
  const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
@@ -116,30 +128,59 @@ function spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId){
  const win=(x,y,ww,wh,grille)=>{rr(c,x,y,ww,wh,u*.05);fs(c,lg(c,0,y,0,y+wh,['#bfe8ff','#6fb7e6']),lw);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(x+ww*.12,y+wh*.15,ww*.14,wh*.5);
   if(grille){c.strokeStyle='#5c6680';c.lineWidth=u*.025;for(let k=1;k<5;k++){c.beginPath();c.moveTo(x+ww*k/5,y);c.lineTo(x+ww*k/5,y+wh);c.stroke()}c.beginPath();c.moveTo(x,y+wh/2);c.lineTo(x+ww,y+wh/2);c.stroke()}};
  const plaque=(cx,cy,text,bg,fg,sz)=>{const pw=text.length*sz*1.08+sz*.6,ph=sz*(settings().ruby==='off'?1.3:1.75);rr(c,cx-pw/2,cy-ph/2,pw,ph,u*.08);fs(c,bg,lw);canvasRuby(c,text,cx,cy+ph/2-sz*.32,sz,fg)};
- if(kind==='gym'){const roofC=city.roof,fy=h-2.3*u;
+ if(kind==='gym'){const roofC=city.roof,top=u*1.75,gx0=u*1.6,gx1=w-u*1.6,base=h-u*.25;
+  // 現代體育館：城市色的弧形金屬屋頂、中央整面玻璃帷幕配直向鋁鰭，徽章嵌在玻璃上，入口有懸挑雨遮
   c.fillStyle='rgba(0,0,0,.16)';c.fillRect(u*.25,h-u*.4,w,u*.4);
-  rr(c,u*.1,fy,w-u*.2,h-fy,u*.08);fs(c,lg(c,0,fy,0,h,['#ffffff','#dfe6f2']),lw);
-  rr(c,u*.1,h-u*.32,w-u*.2,u*.32,u*.05);fs(c,roofC,lw);
-  win(u*.45,fy+u*.55,w/2-u*1.55,u*.75);win(w/2+u*1.1,fy+u*.55,w/2-u*1.55,u*.75);
-  [w/2-u*1.05,w/2+u*.85].forEach(px=>{rr(c,px,fy+u*.25,u*.2,h-fy-u*.25,u*.05);fs(c,'#f4f6fb',lw)});
-  door(w/2,u*1.5,u*1.3,'#a9dcff','#4d8fd0');
-  c.beginPath();c.moveTo(-u*.05,fy+u*.15);c.lineTo(u*.5,u*.45);c.quadraticCurveTo(w/2,-u*.05,w-u*.5,u*.45);c.lineTo(w+u*.05,fy+u*.15);c.closePath();fs(c,lg(c,0,0,0,fy,[shade(roofC,.35),roofC,shade(roofC,-.2)]),lw);
-  c.strokeStyle='rgba(255,255,255,.28)';c.lineWidth=u*.05;for(let k=1;k<6;k++){c.beginPath();c.moveTo(u*.3+k*(w-u*.6)/6,u*.4);c.lineTo(k*w/6,fy+u*.1);c.stroke()}
-  rr(c,-u*.05,fy+u*.05,w+u*.1,u*.2,u*.06);fs(c,'#ffd35a',lw);
-  circ(c,w/2,fy*.52,u*.82);fs(c,'#ffffff',lw);if(emblemImg&&emblemImg.complete&&emblemImg.naturalWidth)c.drawImage(emblemImg,w/2-u*.78,fy*.52-u*.78,u*1.56,u*1.56);
-  plaque(w/2,fy+u*.42,'道館','#1b2340','#ffffff',u*.3)}
- else if(kind==='inn'){const fy=u*.75;c.fillStyle='rgba(0,0,0,.16)';c.fillRect(u*.25,h-u*.4,w,u*.4);
-  rr(c,u*.15,fy,w-u*.3,h-fy,u*.06);fs(c,lg(c,0,0,w,0,['#fbeed3','#f1dcb4']),lw);
-  c.strokeStyle='rgba(160,120,60,.18)';c.lineWidth=1;for(let y=fy+u*.25;y<h;y+=u*.25){c.beginPath();c.moveTo(u*.15,y);c.lineTo(w-u*.15,y);c.stroke()}
-  rr(c,u*.05,u*.3,w-u*.1,fy-u*.15,u*.08);fs(c,'#c7ccd8',lw);rr(c,0,fy-u*.05,w,u*.18,u*.05);fs(c,'#e86a3a',lw);
-  rr(c,w-u*1.3,u*.02,u*.7,u*.55,u*.12);fs(c,lg(c,w-u*1.3,0,w-u*.6,0,['#eef2f8','#9aa4b8']),lw);rr(c,u*.5,u*.35,u*.6,u*.3,u*.05);fs(c,'#e9edf4',lw);
-  const floorH=(h-fy-u*.2)/3;for(let f=0;f<2;f++){const y=fy+u*.3+f*floorH;for(let k=0;k<4;k++){const wx=u*.45+k*(w-u*.9)/4;win(wx,y,(w-u*.9)/4-u*.3,floorH*.55)}
-   if(f===1){c.strokeStyle=OUT;c.lineWidth=lw*.8;c.beginPath();c.moveTo(u*.35,y+floorH*.72);c.lineTo(w-u*.35,y+floorH*.72);c.stroke();for(let x=u*.4;x<w-u*.35;x+=u*.18){c.beginPath();c.moveTo(x,y+floorH*.72);c.lineTo(x,y+floorH*.9);c.stroke()}}}
-  c.beginPath();c.moveTo(w/2-u*1.5,h-u*1.45);c.lineTo(w/2+u*1.5,h-u*1.45);c.lineTo(w/2+u*1.7,h-u*1.15);c.lineTo(w/2-u*1.7,h-u*1.15);c.closePath();fs(c,'#ff5b4a',lw);
-  for(let k=0;k<6;k++){c.fillStyle=k%2?'#ff5b4a':'#ffffff';c.beginPath();const x0=w/2-u*1.7+k*u*3.4/6;c.moveTo(x0,h-u*1.15);c.lineTo(x0+u*3.4/6,h-u*1.15);c.lineTo(x0+u*3.4/12,h-u*1.02);c.fill()}
-  door(w/2,u*1.3,u*1.0,'#d8f1ff','#7cb8e6');
-  [u*.6,w-u*.9].forEach(px=>{rr(c,px,h-u*.45,u*.3,u*.4,u*.06);fs(c,'#b56a3a',lw);circ(c,px+u*.15,h-u*.62,u*.24);fs(c,'#4fae54',lw)});
-  plaque(w/2,fy+u*.05+u*.0,'旅館','#ff5b4a','#ffffff',u*.34)}
+  rr(c,u*.2,top,w-u*.4,h-top,u*.06);fs(c,lg(c,0,top,0,h,['#ffffff','#dfe4ec']),lw);
+  [u*.2,gx1].forEach(px=>{const pw=gx0-u*.2;c.fillStyle=shade(roofC,.15);c.fillRect(px+pw*.42,top+u*.1,pw*.16,base-top-u*.1);
+   [0,1].forEach(r=>{const wy=top+u*(.6+r*1.45);rr(c,px+u*.25,wy,pw-u*.5,u*.95,u*.03);fs(c,lg(c,0,wy,0,wy+u*.95,['#dff1fb','#5f8fb5']),lw*.7);c.fillStyle='rgba(255,255,255,.45)';c.fillRect(px+u*.35,wy+u*.1,u*.07,u*.5)})});
+  rr(c,gx0,top+u*.15,gx1-gx0,base-top-u*.15,u*.03);fs(c,lg(c,0,top,0,base,['#e6f5ff','#8fc3e6','#3e78a8']),lw);
+  c.strokeStyle='#cfd6e2';c.lineWidth=u*.06;for(let x=gx0+u*.32;x<gx1-u*.1;x+=u*.32){c.beginPath();c.moveTo(x,top+u*.15);c.lineTo(x,base);c.stroke()}
+  c.fillStyle='rgba(255,255,255,.3)';[gx0+u*.3,gx1-u*1.1].forEach(x=>{c.beginPath();c.moveTo(x,base);c.lineTo(x+u*.6,top+u*.15);c.lineTo(x+u*.85,top+u*.15);c.lineTo(x+u*.25,base);c.fill()});
+  rr(c,u*.1,base,w-u*.2,u*.25,u*.04);fs(c,'#b9bfca',lw);
+  const arcY=t=>(1-t)*(1-t)*(top+u*.05)+2*t*(1-t)*(-u*.45)+t*t*(top+u*.05);
+  c.beginPath();c.moveTo(-u*.05,top+u*.05);c.quadraticCurveTo(w/2,-u*.45,w+u*.05,top+u*.05);c.lineTo(w-u*.1,top+u*.32);c.lineTo(u*.1,top+u*.32);c.closePath();
+  fs(c,lg(c,0,0,0,top,[shade(roofC,.35),roofC,shade(roofC,-.25)]),lw);
+  c.strokeStyle='rgba(255,255,255,.3)';c.lineWidth=u*.035;for(let k=1;k<10;k++){const t=k/10,x=-u*.05+t*(w+u*.1);c.beginPath();c.moveTo(x,arcY(t)+u*.04);c.lineTo(x,top+u*.28);c.stroke()}
+  c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=u*.04;c.beginPath();c.moveTo(u*.3,top-u*.08);c.quadraticCurveTo(w/2,-u*.32,w-u*.3,top-u*.08);c.stroke();
+  c.fillStyle='rgba(255,211,90,.6)';c.fillRect(u*.2+lw/2,top+u*.32,w-u*.4-lw,u*.06);
+  const ey=top+u*1.05;circ(c,w/2,ey,u*.8);fs(c,'#ffffff',lw);circ(c,w/2,ey,u*.8);c.strokeStyle=roofC;c.lineWidth=u*.08;c.stroke();
+  if(emblemImg&&emblemImg.complete&&emblemImg.naturalWidth)c.drawImage(emblemImg,w/2-u*.7,ey-u*.7,u*1.4,u*1.4);
+  const cy=h-u*1.6;rr(c,w/2-u*1.6,cy,u*3.2,u*.2,u*.04);fs(c,'#2b2e35',lw);c.fillStyle='rgba(255,211,90,.6)';c.fillRect(w/2-u*1.5,cy+u*.2,u*3.0,u*.05);
+  rr(c,w/2-u*.8,h-u*1.35,u*1.6,u*1.1,u*.03);fs(c,'#2b2e35',lw*.8);
+  [w/2-u*.74,w/2+u*.02].forEach(px=>{rr(c,px,h-u*1.29,u*.72,u*1.04,u*.02);fs(c,lg(c,0,h-u*1.3,0,h,['#e6f6ff','#8fc0dc']))});
+  c.fillStyle='#c9ced6';[w/2-u*.12,w/2+u*.08].forEach(px=>c.fillRect(px,h-u*.95,u*.04,u*.35));
+  plaque(w/2,cy-u*.28,'道館','#2b2e35','#ffffff',u*.3)}
+ else if(kind==='inn'){const eave=u*2.45,apex=u*.8,x0=u*.35,x1=w-u*.35,base=h-u*.3,ink=Math.max(1,u*.04);c.fillStyle='rgba(0,0,0,.16)';c.fillRect(u*.25,h-u*.4,w,u*.4);
+  // 旅館是山中木屋：原木疊成的牆和山牆、轉角露出圓木頭，陡斜的木瓦屋頂、石砌煙囪，門前有附屋簷的門廊
+  rr(c,w-u*1.65,u*.85,u*.6,u*1.3,u*.04);fs(c,'#9a958c',lw);c.strokeStyle='rgba(60,55,50,.45)';c.lineWidth=ink*.6;
+  for(let y=u*.85+u*.22,r=0;y<u*2.1;y+=u*.22,r++){c.beginPath();c.moveTo(w-u*1.65,y);c.lineTo(w-u*1.05,y);c.stroke();const sx=w-u*1.65+(r%2?u*.2:u*.4);c.beginPath();c.moveTo(sx,y-u*.22);c.lineTo(sx,y);c.stroke()}
+  rr(c,w-u*1.72,u*.78,u*.74,u*.14,u*.03);fs(c,'#6f6a62',lw*.7);
+  const wall=()=>{c.beginPath();c.moveTo(x0,eave);c.lineTo(w/2,apex);c.lineTo(x1,eave);c.lineTo(x1,base);c.lineTo(x0,base);c.closePath()};
+  c.save();wall();c.clip();for(let y=apex;y<base;y+=u*.3){rr(c,x0-u*.1,y,x1-x0+u*.2,u*.3,u*.14);fs(c,lg(c,0,y,0,y+u*.3,['#d49a5e','#a8693a','#7a4724']));
+   c.strokeStyle='rgba(60,30,10,.25)';c.lineWidth=Math.max(1,u*.02);c.beginPath();c.moveTo(x0+u*((y/u*7)%1.3+.3),y+u*.15);c.lineTo(x0+u*((y/u*7)%1.3+.9),y+u*.15);c.stroke()}c.restore();
+  wall();c.strokeStyle=OUT;c.lineWidth=lw;c.stroke();
+  for(let y=eave+u*.15;y<base-u*.1;y+=u*.3)[x0,x1].forEach(px=>{circ(c,px,y,u*.15);fs(c,'#e6bd86',lw*.7);circ(c,px,y,u*.08);c.strokeStyle='rgba(120,70,30,.6)';c.lineWidth=Math.max(1,u*.02);c.stroke()});
+  c.beginPath();c.moveTo(w/2,u*.3);c.lineTo(-u*.2,eave+u*.05);c.lineTo(u*.08,eave+u*.38);c.lineTo(w/2,apex+u*.08);c.lineTo(w-u*.08,eave+u*.38);c.lineTo(w+u*.2,eave+u*.05);c.closePath();
+  fs(c,lg(c,0,u*.3,0,eave,['#5a6b4a','#3d4a33']),lw);
+  c.strokeStyle='rgba(20,30,15,.35)';c.lineWidth=Math.max(1,u*.025);for(let k=1;k<6;k++){const t=k/6;c.beginPath();c.moveTo(w/2-(w/2+u*.2)*t,u*.3+(eave+u*.05-u*.3)*t);c.lineTo(w/2-(w/2-u*.08)*t,apex+u*.08+(eave+u*.38-apex-u*.08)*t);c.moveTo(w/2+(w/2+u*.2)*t,u*.3+(eave+u*.05-u*.3)*t);c.lineTo(w/2+(w/2-u*.08)*t,apex+u*.08+(eave+u*.38-apex-u*.08)*t);c.stroke()}
+  circ(c,w/2,u*1.55,u*.34);fs(c,'#6b3f1f',lw);circ(c,w/2,u*1.55,u*.26);fs(c,lg(c,0,u*1.3,0,u*1.8,['#fff1cf','#e8b86a']),lw*.5);
+  c.strokeStyle='#6b3f1f';c.lineWidth=u*.05;c.beginPath();c.moveTo(w/2-u*.26,u*1.55);c.lineTo(w/2+u*.26,u*1.55);c.moveTo(w/2,u*1.29);c.lineTo(w/2,u*1.81);c.stroke();
+  [u*.75,w-u*1.85].forEach(px=>{const wy=u*3.25,ww=u*1.1,wh=u*.95;rr(c,px-u*.06,wy-u*.06,ww+u*.12,wh+u*.12,u*.03);fs(c,'#6b3f1f',lw);
+   rr(c,px,wy,ww,wh,u*.02);fs(c,lg(c,0,wy,0,wy+wh,['#fff1cf','#e8b86a','#c98a3a']));c.strokeStyle='#6b3f1f';c.lineWidth=u*.06;c.beginPath();c.moveTo(px+ww/2,wy);c.lineTo(px+ww/2,wy+wh);c.moveTo(px,wy+wh/2);c.lineTo(px+ww,wy+wh/2);c.stroke();
+   rr(c,px-u*.08,wy+wh+u*.04,ww+u*.16,u*.2,u*.03);fs(c,'#8a5634',lw*.7);['#ff5b4a','#ffc93c','#ff8fb6','#ff5b4a'].forEach((col,i)=>{circ(c,px+ww*(.12+i*.25),wy+wh+u*.02,u*.08);fs(c,col,lw*.4)})});
+  const py=h-u*1.75,pl=w/2-u*1.35,pr=w/2+u*1.35;
+  [pl,pr-u*.22].forEach(px=>{rr(c,px,py+u*.2,u*.22,base-py-u*.2,u*.05);fs(c,lg(c,px,0,px+u*.22,0,['#c98a4f','#7a4724']),lw*.8)});
+  c.beginPath();c.moveTo(pl-u*.2,py+u*.3);c.lineTo(w/2,py-u*.25);c.lineTo(pr+u*.2,py+u*.3);c.closePath();fs(c,lg(c,0,py-u*.25,0,py+u*.3,['#5a6b4a','#3d4a33']),lw);
+  const dw=u*.95,dh=u*1.25,dx=w/2-dw/2;rr(c,dx,base-dh,dw,dh,u*.06);fs(c,lg(c,dx,0,dx+dw,0,['#9a5e30','#6b3f1f']),lw);
+  c.strokeStyle='rgba(40,20,5,.45)';c.lineWidth=Math.max(1,u*.025);for(let x=dx+dw/4;x<dx+dw-u*.05;x+=dw/4){c.beginPath();c.moveTo(x,base-dh+u*.05);c.lineTo(x,base);c.stroke()}
+  rr(c,w/2-u*.22,base-dh+u*.15,u*.44,u*.3,u*.05);fs(c,lg(c,0,base-dh,0,base-dh+u*.45,['#fff1cf','#e8b86a']),lw*.5);
+  circ(c,dx+dw-u*.17,base-dh*.45,u*.05);c.fillStyle='#e8c873';c.fill();
+  rr(c,u*.15,base-u*.04,w-u*.3,u*.26,u*.03);fs(c,'#8a5634',lw);c.strokeStyle='rgba(40,20,5,.35)';c.lineWidth=Math.max(1,u*.02);for(let x=u*.6;x<w-u*.3;x+=u*.45){c.beginPath();c.moveTo(x,base-u*.02);c.lineTo(x,base+u*.2);c.stroke()}
+  [pl+u*.11,pr-u*.11].forEach(px=>{const ly=py+u*.55;rr(c,px-u*.1,ly,u*.2,u*.28,u*.05);fs(c,'#2b2e35',lw*.6);rr(c,px-u*.06,ly+u*.05,u*.12,u*.18,u*.03);c.fillStyle='#ffd35a';c.fill()});
+  [u*.45,w-u*.95].forEach(px=>{rr(c,px,base-u*.42,u*.5,u*.42,u*.08);fs(c,lg(c,px,0,px+u*.5,0,['#a8693a','#6b3f1f']),lw*.7);c.fillStyle='#3a2416';c.fillRect(px,base-u*.32,u*.5,u*.04);c.fillRect(px,base-u*.14,u*.5,u*.04);
+   [.12,.25,.38].forEach(k=>{circ(c,px+u*k,base-u*.5,u*.13);fs(c,'#4fae54',lw*.5)})});
+  plaque(w/2,u*2.62,'旅館','#7a4a26','#fff3d6',u*.3)}
  else if(kind==='store'){const fy=u*.78,brand=storeBrand(brandId);c.fillStyle='rgba(0,0,0,.2)';c.fillRect(u*.22,h-u*.42,w-u*.08,u*.42);
   // Raised roof cap and illuminated chain sign make each shop read as a real storefront.
   c.beginPath();c.moveTo(u*.08,u*.28);c.lineTo(u*.32,u*.06);c.lineTo(w-u*.18,u*.06);c.lineTo(w-u*.04,u*.28);c.lineTo(w-u*.04,fy);c.lineTo(u*.08,fy);c.closePath();fs(c,lg(c,0,0,0,fy,['#f7f8fb','#c7ced9']),lw);
@@ -162,22 +203,33 @@ function spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId){
   rr(c,w/2-u*.45,fy-u*.5,u*.9,u*.7,u*.15);fs(c,'#fff6e0',lw);rr(c,w/2-u*.14,fy-u*.38,u*.28,u*.4,u*.06);fs(c,'#ffe0b0',lw*.7);c.fillStyle='#3a2a22';for(let k=0;k<3;k++){circ(c,w/2-u*.07+k*u*.07,fy-u*.06,u*.03);c.fill()}
   c.strokeStyle=OUT;c.lineWidth=lw*.8;c.beginPath();c.moveTo(w/2+u*.05,fy-u*.38);c.lineTo(w/2+u*.12,fy-u*.55);c.stroke();
   plaque(w-u*.75,h-u*.55,'茶','#1b2340','#ffffff',u*.3)}
- else if(kind==='temple'){const fy=h-2.05*u,red='#c8372d';c.fillStyle='rgba(0,0,0,.16)';c.fillRect(u*.25,h-u*.4,w,u*.4);
-  rr(c,0,h-u*.32,w,u*.32,u*.04);fs(c,'#b9b2a4',lw);rr(c,w/2-u*1.1,h-u*.18,u*2.2,u*.18,u*.03);fs(c,'#d1cabd',lw);
-  rr(c,u*.3,fy,w-u*.6,h-fy-u*.3,u*.04);fs(c,lg(c,0,fy,0,h,[shade(red,.1),shade(red,-.15)]),lw);
-  rr(c,w/2-u*.8,fy+u*.55,u*1.6,h-fy-u*.85,u*.05);fs(c,'#6b3a1f',lw);c.beginPath();c.moveTo(w/2,fy+u*.55);c.lineTo(w/2,h-u*.3);c.strokeStyle=OUT;c.stroke();
-  c.fillStyle='#ffd35a';for(let r2=0;r2<3;r2++)for(let k=0;k<3;k++){circ(c,w/2-u*.6+k*u*.2,fy+u*.8+r2*u*.3,u*.04);c.fill();circ(c,w/2+u*.2+k*u*.2,fy+u*.8+r2*u*.3,u*.04);c.fill()}
-  [u*.55,w/2-u*1.2,w/2+u*.95,w-u*.8].forEach(px=>{rr(c,px,fy+u*.1,u*.25,h-fy-u*.4,u*.05);fs(c,lg(c,px,0,px+u*.25,0,['#e0473c','#9e2620']),lw)});
-  [u*1.1,w-u*1.3].forEach(px=>{rr(c,px,fy+u*.7,u*.35,u*.55,u*.04);fs(c,'#8fc7a8',lw);c.strokeStyle='#2f6a52';c.lineWidth=u*.02;for(let k=1;k<4;k++){c.beginPath();c.moveTo(px+k*u*.087,fy+u*.7);c.lineTo(px+k*u*.087,fy+u*1.25);c.stroke()}});
-  const ry=fy+u*.1;c.beginPath();c.moveTo(-u*.15,ry-u*.05);c.quadraticCurveTo(u*.4,ry,u*.7,ry-u*.6);c.lineTo(w-u*.7,ry-u*.6);c.quadraticCurveTo(w-u*.4,ry,w+u*.15,ry-u*.05);c.lineTo(w,ry+u*.12);c.lineTo(0,ry+u*.12);c.closePath();fs(c,lg(c,0,ry-u*.6,0,ry,['#f6a443','#d86f1f']),lw);
-  c.strokeStyle='rgba(120,50,10,.35)';c.lineWidth=u*.03;for(let k=1;k<14;k++){c.beginPath();c.moveTo(u*.7+k*(w-u*1.4)/14,ry-u*.58);c.lineTo(k*w/14,ry+u*.1);c.stroke()}
-  const ry2=ry-u*.75;c.beginPath();c.moveTo(u*.3,ry2+u*.2);c.quadraticCurveTo(u*.9,ry2+u*.12,u*1.2,ry2-u*.55);c.lineTo(w-u*1.2,ry2-u*.55);c.quadraticCurveTo(w-u*.9,ry2+u*.12,w-u*.3,ry2+u*.2);c.lineTo(w-u*.6,ry2+u*.2);c.lineTo(u*.6,ry2+u*.2);c.closePath();fs(c,lg(c,0,ry2-u*.55,0,ry2,['#f6a443','#d86f1f']),lw);
-  rr(c,u*.9,ry2-u*.68,w-u*1.8,u*.16,u*.06);fs(c,'#2f9a6a',lw);
-  c.beginPath();c.moveTo(u*.9,ry2-u*.6);c.quadraticCurveTo(u*.55,ry2-u*.7,u*.45,ry2-u*1.05);c.quadraticCurveTo(u*.8,ry2-u*.85,u*1.1,ry2-u*.66);fs(c,'#2f9a6a',lw);
-  c.beginPath();c.moveTo(w-u*.9,ry2-u*.6);c.quadraticCurveTo(w-u*.55,ry2-u*.7,w-u*.45,ry2-u*1.05);c.quadraticCurveTo(w-u*.8,ry2-u*.85,w-u*1.1,ry2-u*.66);fs(c,'#2f9a6a',lw);
-  circ(c,w/2,ry2-u*.82,u*.16);fs(c,'#ffd35a',lw);
-  [u*1.6,w-u*1.6].forEach(px=>{c.strokeStyle=OUT;c.lineWidth=lw*.7;c.beginPath();c.moveTo(px,ry+u*.12);c.lineTo(px,ry+u*.3);c.stroke();ell(c,px,ry+u*.5,u*.17,u*.22);fs(c,'#ff4a3a',lw);c.fillStyle='#ffd35a';c.fillRect(px-u*.1,ry+u*.26,u*.2,u*.05);c.fillRect(px-u*.1,ry+u*.69,u*.2,u*.05)});
-  plaque(w/2,fy+u*.3,'廟','#1b2340','#ffd35a',u*.32)}
+ else if(kind==='temple'){const fy=h-2.3*u,red='#c8372d',gold='#e8c873';c.fillStyle='rgba(0,0,0,.16)';c.fillRect(u*.25,h-u*.4,w,u*.4);
+  // 現代廟宇：保留燕尾雙層屋頂和紅金配色，改成俐落的深色屋簷、整面暖光玻璃、細紅柱和圓筒燈籠
+  const roof=(y,x0,x1,lift,th)=>{c.beginPath();c.moveTo(x0,y-lift);c.quadraticCurveTo(x0+u*.6,y-th,x0+u*1.0,y-th);c.lineTo(x1-u*1.0,y-th);c.quadraticCurveTo(x1-u*.6,y-th,x1,y-lift);
+   c.lineTo(x1-u*.12,y-lift+u*.1);c.quadraticCurveTo(x1-u*.6,y,x1-u*1.0,y);c.lineTo(x0+u*1.0,y);c.quadraticCurveTo(x0+u*.6,y,x0+u*.12,y-lift+u*.1);c.closePath();
+   fs(c,lg(c,0,y-lift,0,y,['#555a64','#2b2e35']),lw);c.fillStyle=gold;c.fillRect(x0+u*1.0,y-u*.08,x1-x0-u*2.0,u*.05);
+   c.fillStyle='rgba(255,211,90,.35)';c.fillRect(x0+u*1.0,y+lw/2,x1-x0-u*2.0,u*.07)};
+  rr(c,0,h-u*.32,w,u*.32,u*.04);fs(c,'#e6e2da',lw);rr(c,w/2-u*1.1,h-u*.18,u*2.2,u*.18,u*.03);fs(c,'#f3f0ea',lw);
+  rr(c,u*.35,fy,w-u*.7,h-fy-u*.3,u*.04);fs(c,lg(c,0,fy,0,h,['#faf7f2','#e4ded3']),lw);
+  const gx0=u*.95,gx1=w-u*.95,gy=fy+u*.62,gb=h-u*.32;rr(c,gx0,gy,gx1-gx0,gb-gy,u*.03);fs(c,lg(c,0,gy,0,gb,['#fff1cf','#e8b86a','#b8783a']),lw*.8);
+  c.strokeStyle='#4a3a30';c.lineWidth=Math.max(1,u*.035);for(let x=gx0+u*.5;x<gx1-u*.1;x+=u*.5){c.beginPath();c.moveTo(x,gy);c.lineTo(x,gb);c.stroke()}
+  c.beginPath();c.moveTo(gx0,gy+u*.42);c.lineTo(gx1,gy+u*.42);c.stroke();
+  c.fillStyle='rgba(255,255,255,.3)';[gx0+u*.2,gx1-u*1.0].forEach(x=>{c.beginPath();c.moveTo(x,gb);c.lineTo(x+u*.4,gy);c.lineTo(x+u*.6,gy);c.lineTo(x+u*.2,gb);c.fill()});
+  const dw=u*1.3,dh=u*1.25,dx=w/2-dw/2;rr(c,dx-u*.06,h-u*.3-dh-u*.06,dw+u*.12,dh+u*.06,u*.03);fs(c,'#2b2e35',lw);
+  [dx,w/2].forEach(px=>{rr(c,px+u*.03,h-u*.3-dh,dw/2-u*.06,dh,u*.02);fs(c,lg(c,0,h-dh,0,h,[shade(red,.1),shade(red,-.2)]),lw*.6);
+   rr(c,px+u*.12,h-u*.3-dh+u*.12,dw/2-u*.24,dh-u*.24,u*.02);c.strokeStyle=gold;c.lineWidth=Math.max(1,u*.025);c.stroke()});
+  c.fillStyle=gold;[w/2-u*.12,w/2+u*.08].forEach(px=>c.fillRect(px,h-u*.3-dh*.6,u*.04,u*.3));
+  [u*.42,w-u*.6,dx-u*.3,dx+dw+u*.12].forEach(px=>{rr(c,px,fy+u*.05,u*.18,h-fy-u*.35,u*.03);fs(c,lg(c,px,0,px+u*.18,0,['#e0473c','#9e2620']),lw*.8)});
+  roof(fy+u*.1,-u*.15,w+u*.15,u*.55,u*.28);
+  const cy0=fy-u*.72;rr(c,u*1.5,cy0,w-u*3.0,u*.65,u*.03);fs(c,'#f5f1ea',lw*.8);
+  rr(c,u*1.7,cy0+u*.14,w-u*3.4,u*.36,u*.02);fs(c,lg(c,0,cy0,0,cy0+u*.5,['#fff1cf','#e8b86a']),lw*.6);
+  c.strokeStyle='#4a3a30';c.lineWidth=Math.max(1,u*.03);for(let x=u*2.1;x<w-u*1.75;x+=u*.4){c.beginPath();c.moveTo(x,cy0+u*.14);c.lineTo(x,cy0+u*.5);c.stroke()}
+  roof(cy0,u*.8,w-u*.8,u*.45,u*.22);
+  rr(c,u*1.8,cy0-u*.36,w-u*3.6,u*.1,u*.05);fs(c,gold,lw*.7);
+  circ(c,w/2,cy0-u*.55,u*.17);fs(c,lg(c,0,cy0-u*.72,0,cy0-u*.38,['#fff3b0','#e0a82e']),lw);
+  [u*1.55,w-u*1.55].forEach(px=>{const ly=fy+u*.12;c.strokeStyle=OUT;c.lineWidth=lw*.6;c.beginPath();c.moveTo(px,ly);c.lineTo(px,ly+u*.16);c.stroke();
+   rr(c,px-u*.13,ly+u*.16,u*.26,u*.46,u*.1);fs(c,lg(c,px-u*.13,0,px+u*.13,0,['#ff6b5a','#c8372d']),lw*.7);c.fillStyle=gold;c.fillRect(px-u*.13,ly+u*.16,u*.26,u*.05);c.fillRect(px-u*.13,ly+u*.57,u*.26,u*.05)});
+  plaque(w/2,fy+u*.38,'廟','#2b2e35',gold,u*.3)}
  else if(kind==='house'){const fy=u*.95;c.fillStyle='rgba(0,0,0,.16)';c.fillRect(u*.25,h-u*.4,w,u*.4);
   rr(c,u*.1,fy,w-u*.2,h-fy,u*.04);fs(c,'#f3efe6',lw);c.strokeStyle='rgba(120,110,90,.22)';c.lineWidth=1;for(let y=fy;y<h;y+=u*.14){c.beginPath();c.moveTo(u*.1,y);c.lineTo(w-u*.1,y);c.stroke()}for(let x=u*.1;x<w;x+=u*.14){c.beginPath();c.moveTo(x,fy);c.lineTo(x,h-u*1.2);c.stroke()}
   rr(c,0,u*.55,w,u*.5,u*.05);fs(c,'#c8ccd6',lw);rr(c,u*.35,u*.05,u*.9,u*.6,u*.18);fs(c,lg(c,u*.35,0,u*1.25,0,['#f5f7fb','#9aa3b6']),lw);c.strokeStyle='#8a93a6';c.lineWidth=u*.03;c.beginPath();c.moveTo(u*.35,u*.3);c.lineTo(u*1.25,u*.3);c.stroke();
@@ -406,21 +458,112 @@ export function spriteFurn(f,k,u,dpr,city){const ex=FEX[f.t]||.5,fw=f.w*u,fh=f.h
  else if(f.t==='rack'){shadow(u*.1,u*.8);rr(c,u*.12,y0-u*.2,u*.76,fh+u*.1,u*.05);fs(c,'#8a5a36',lw);for(let r=0;r<3;r++)for(let i=0;i<3;i++){rr(c,u*(.18+i*.22),y0-u*.12+r*u*.36,u*.18,u*.3,u*.02);fs(c,['#ff5b4a','#ffc93c','#14b3a4','#7a8cff','#ff8fb6'][(r*3+i)%5],lw*.4);c.fillStyle='rgba(255,255,255,.75)';c.fillRect(u*(.2+i*.22),y0-u*.08+r*u*.36,u*.14,u*.05)}}
  else if(f.t==='cushion'){ell(c,fw/2,yb-u*.45,u*.36,u*.24);fs(c,lg(c,0,yb-u*.7,0,yb-u*.2,['#ff6b5a','#b8312a']),lw);ell(c,fw/2,yb-u*.47,u*.25,u*.15);c.strokeStyle='#ffd35a';c.lineWidth=u*.03;c.stroke()}
  return cv}
+// 超商是俐落的現代歐式街屋：石材簷口、灰泥牆、上層窗，一樓整面玻璃店面
+// 回傳圓招牌的位置（兩扇窗中間）
+function storeFront(c,u,w,h,fy,lw,brand){
+ const P={wall:'#eef0f2',trim:'#c9ced6',front:'#2b2f36'};
+ c.fillStyle='rgba(20,30,40,.2)';c.fillRect(u*.18,h-u*.35,w-u*.36,u*.35);
+ const top=fy-u*.35;
+ rr(c,u*.12,top+u*.2,w-u*.24,h-top-u*.2,u*.04);fs(c,lg(c,0,top,0,h,[shade(P.wall,.2),P.wall]),lw);
+ c.strokeStyle='rgba(120,130,150,.22)';c.lineWidth=Math.max(1,u*.02);for(let x=u*1.12;x<w-u*.2;x+=u){c.beginPath();c.moveTo(x,top+u*.3);c.lineTo(x,fy+u*1.36);c.stroke()}
+ rr(c,u*.04,top,w-u*.08,u*.28,u*.04);fs(c,P.trim,lw);c.fillStyle='rgba(0,0,0,.14)';c.fillRect(u*.08,top+u*.2,w-u*.16,u*.06);
+ const win=(x,y,ww,wh)=>{
+  rr(c,x,y,ww,wh,u*.03);fs(c,'#3a404a',lw*.8);
+  rr(c,x+u*.06,y+u*.06,ww-u*.12,wh-u*.12,u*.02);fs(c,lg(c,0,y,0,y+wh,['#dff1fb','#7fb0cf']));
+  c.fillStyle='rgba(255,255,255,.5)';c.fillRect(x+ww*.2,y+wh*.12,ww*.1,wh*.4);
+  rr(c,x-u*.04,y+wh,ww+u*.08,u*.06,u*.02);fs(c,P.trim,lw*.5)};
+ win(u*1.0,fy+u*.18,u*.62,u*.95);win(w-u*1.62,fy+u*.18,u*.62,u*.95);
+ const sign=brand?.sign||'STORE';
+ rr(c,u*.2,fy+u*1.36,w-u*.4,u*.44,u*.04);fs(c,brand.primary,lw);
+ c.fillStyle='#ffffff';c.font=`900 ${u*(sign.length>7?.2:.26)}px system-ui,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(sign,w/2,fy+u*1.59);
+ rr(c,u*.22,fy+u*1.8,w-u*.44,h-fy-u*1.8,u*.02);fs(c,P.front,lw);
+ brand.stripes.forEach((col,i)=>{c.fillStyle=col;c.fillRect(u*.26,fy+u*(1.84+i*.05),w-u*.52,u*.05)});
+ const dw=u*.88,dh=u*1.18,dx=w/2-dw/2,gt=fy+u*2.06,gb=h-u*.42;
+ const pane=(x0,x1)=>{rr(c,x0,gt,x1-x0,gb-gt,u*.02);fs(c,lg(c,0,gt,0,gb,['#effaff','#a9d3ea','#5f97bd']),lw*.7);
+  for(let s=0;s<2;s++){const sy=gt+(gb-gt)*(.42+s*.4);c.fillStyle='rgba(27,35,64,.3)';c.fillRect(x0+u*.06,sy,x1-x0-u*.12,u*.04);
+   for(let k=0;k<6;k++){c.fillStyle=['#ff5b4a','#ffc93c','#14b3a4','#7a8cff','#ff8fb6'][(k+s*2)%5];c.fillRect(x0+u*.1+k*(x1-x0-u*.2)/6,sy-u*.18,u*.12,u*.18)}}
+  c.strokeStyle=P.front;c.lineWidth=u*.05;c.beginPath();c.moveTo((x0+x1)/2,gt);c.lineTo((x0+x1)/2,gb);c.stroke();
+  c.fillStyle='rgba(255,255,255,.35)';c.beginPath();c.moveTo(x0+u*.15,gb);c.lineTo(x0+u*.45,gt);c.lineTo(x0+u*.6,gt);c.lineTo(x0+u*.3,gb);c.fill()};
+ pane(u*.42,dx-u*.14);pane(dx+dw+u*.14,w-u*.42);
+ rr(c,u*.22,gb,w-u*.44,h-gb,u*.02);fs(c,shade(P.front,.25),lw*.7);
+ rr(c,dx,h-dh,dw,dh,u*.04);fs(c,P.front,lw);rr(c,dx+u*.08,h-dh+u*.08,dw-u*.16,dh-u*.1,u*.02);fs(c,lg(c,0,h-dh,0,h,['#e6f6ff','#8fc0dc']));
+ c.strokeStyle=P.front;c.lineWidth=u*.04;c.beginPath();c.moveTo(w/2,h-dh);c.lineTo(w/2,h);c.stroke();
+ const tx=w-u*.95,ty=gt+u*.12;rr(c,tx,ty,u*.42,u*.22,u*.05);fs(c,brand.secondary,lw*.5);c.fillStyle='#ffffff';c.font=`900 ${u*.14}px system-ui,sans-serif`;c.fillText('24H',tx+u*.21,ty+u*.115);
+ return{bx:w/2,by:fy+u*.65,br:u*.4};
+}
+// 咖啡店整棟是一只放在碟子上的陶瓷馬克杯：右邊杯把、杯口一圈拿鐵拉花冒著熱氣，杯身一圈招牌，門開在杯底
+function mugFront(c,u,w,h,lw){
+ const cx=w/2,x0=u*.8,x1=w-u*.8,top=u*1.1,bot=h-u*.3,ink=Math.max(1,u*.05);
+ ell(c,cx,h-u*.2,u*2.4,u*.2);fs(c,lg(c,0,h-u*.4,0,h,['#fbf5ea','#d9c7ae']),lw);
+ c.strokeStyle=OUT;c.lineWidth=u*.34;c.beginPath();c.moveTo(x1-u*.1,top+u*.6);c.bezierCurveTo(w+u*.05,top+u*.5,w+u*.05,top+u*2.5,x1-u*.1,top+u*2.4);c.stroke();
+ c.strokeStyle='#efe4d3';c.lineWidth=u*.24;c.stroke();
+ rr(c,x0,top,x1-x0,bot-top,u*.45);fs(c,lg(c,x0,0,x1,0,['#fffaf2','#f1e6d6','#d4c0a4']),lw);
+ c.fillStyle='rgba(255,255,255,.55)';rr(c,x0+u*.2,top+u*.45,u*.14,u*1.4,u*.07);c.fill();
+ ell(c,cx,top,(x1-x0)/2,u*.3);fs(c,'#fbf5ea',lw);
+ ell(c,cx,top+u*.02,(x1-x0)/2-u*.16,u*.2);fs(c,'#5b3525',lw*.6);
+ ell(c,cx,top+u*.03,u*1.15,u*.14);c.fillStyle='#c98f5a';c.fill();
+ c.fillStyle='#fff6e6';c.beginPath();c.moveTo(cx,top+u*.13);c.bezierCurveTo(cx-u*.32,top+u*.02,cx-u*.16,top-u*.12,cx,top-u*.03);c.bezierCurveTo(cx+u*.16,top-u*.12,cx+u*.32,top+u*.02,cx,top+u*.13);c.fill();
+ [cx-u*1.0,cx+u*1.0].forEach(px=>{const py=top+u*.55,ww=u*.52,wh=u*.72;
+  c.beginPath();c.moveTo(px-ww/2,py+wh);c.lineTo(px-ww/2,py+ww/2);c.arc(px,py+ww/2,ww/2,Math.PI,0);c.lineTo(px+ww/2,py+wh);c.closePath();fs(c,'#2a211c',lw*.8);
+  c.beginPath();c.moveTo(px-ww/2+u*.06,py+wh-u*.06);c.lineTo(px-ww/2+u*.06,py+ww/2);c.arc(px,py+ww/2,ww/2-u*.06,Math.PI,0);c.lineTo(px+ww/2-u*.06,py+wh-u*.06);c.closePath();fs(c,lg(c,0,py,0,py+wh,['#fff1cf','#e0b77a']));
+  c.strokeStyle='#2a211c';c.lineWidth=u*.035;c.beginPath();c.moveTo(px,py+u*.06);c.lineTo(px,py+wh);c.moveTo(px-ww/2,py+wh*.6);c.lineTo(px+ww/2,py+wh*.6);c.stroke()});
+ const sy=top+u*1.45;rr(c,cx-u*1.62,sy,u*3.24,u*.42,u*.06);fs(c,'#2a211c',lw);
+ rr(c,cx-u*1.54,sy+u*.06,u*3.08,u*.3,u*.03);c.strokeStyle='#e8c873';c.lineWidth=Math.max(1,u*.02);c.stroke();
+ c.fillStyle='#e8c873';c.font=`700 ${u*.22}px Georgia,"Noto Serif TC",serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('CAFÉ · COFFEE',cx,sy+u*.22);
+ c.fillStyle='#6b4226';[-1.25,-.85,.85,1.25].forEach(k=>{const bx=cx+u*k,by=sy+u*.72;c.save();c.translate(bx,by);c.rotate(k*.6);ell(c,0,0,u*.1,u*.065);c.fill();c.strokeStyle='#3a2416';c.lineWidth=Math.max(1,u*.02);c.beginPath();c.moveTo(-u*.08,0);c.quadraticCurveTo(0,u*.03,u*.08,0);c.stroke();c.restore()});
+ const dw=u*.88,dh=u*1.18,dx=cx-dw/2;c.beginPath();c.moveTo(dx,h);c.lineTo(dx,h-dh+dw/2);c.arc(cx,h-dh+dw/2,dw/2,Math.PI,0);c.lineTo(dx+dw,h);c.closePath();fs(c,'#2a211c',lw);
+ c.beginPath();c.moveTo(dx+u*.08,h-u*.08);c.lineTo(dx+u*.08,h-dh+dw/2);c.arc(cx,h-dh+dw/2,dw/2-u*.08,Math.PI,0);c.lineTo(dx+dw-u*.08,h-u*.08);c.closePath();fs(c,lg(c,0,h-dh,0,h,['#fff1cf','#c99a5c']));
+ c.fillStyle='#e8c873';c.fillRect(dx+dw-u*.22,h-dh*.55,u*.05,u*.28);
+ [dx-u*.42,dx+dw+u*.14].forEach(px=>{rr(c,px,h-u*.32,u*.28,u*.3,u*.04);fs(c,'#b8643a',lw*.6);circ(c,px+u*.14,h-u*.5,u*.2);fs(c,lg(c,0,h-u*.7,0,h-u*.3,['#6cc46f','#2f7a3a']),lw*.6)});
+ return{bx:cx,by:top+u*.85,br:u*.34};
+}
+// 茶飲店整棟是一把青瓷茶壺：左邊壺嘴冒著熱氣、右邊壺把、頂上壺蓋，壺身一圈招牌，門開在壺底
+function teapotFront(c,u,w,h,lw){
+ const cx=w/2,cy=h-u*1.85,rx=u*1.85,ry=u*1.7,ink=Math.max(1,u*.05);
+ ell(c,cx,h-u*.12,u*1.9,u*.14);c.fillStyle='rgba(20,30,40,.22)';c.fill();
+ c.lineCap='round';c.strokeStyle=OUT;c.lineWidth=u*.34;c.beginPath();c.moveTo(cx+rx*.82,cy-ry*.6);c.bezierCurveTo(w+u*.05,cy-ry*.75,w+u*.05,cy+ry*.35,cx+rx*.85,cy+ry*.45);c.stroke();
+ c.strokeStyle='#4f8a6c';c.lineWidth=u*.24;c.stroke();
+ c.beginPath();c.moveTo(cx-rx*.8,cy-u*.05);c.quadraticCurveTo(u*.35,cy-u*.2,u*.18,cy-u*1.45);c.lineTo(u*.5,cy-u*1.5);c.quadraticCurveTo(u*.62,cy-u*.65,cx-rx*.72,cy+u*.65);c.closePath();fs(c,lg(c,0,cy-u*1.5,0,cy+u*.6,['#bfe0cb','#6fa88a']),lw);
+ ell(c,u*.34,cy-u*1.47,u*.17,u*.06);fs(c,'#3f7a5c',lw*.6);
+ ell(c,cx,cy,rx,ry);fs(c,lg(c,cx-rx,cy-ry,cx+rx*.6,cy+ry,['#e4f3e8','#9fcdb2','#5d9478']),lw);
+ c.fillStyle='rgba(255,255,255,.45)';ell(c,cx-rx*.45,cy-ry*.5,rx*.22,ry*.12);c.fill();
+ rr(c,cx-u*1.25,h-u*.34,u*2.5,u*.3,u*.08);fs(c,'#3f7a5c',lw);
+ ell(c,cx,cy-ry+u*.08,u*1.05,u*.22);fs(c,'#3f7a5c',lw);
+ c.beginPath();c.ellipse(cx,cy-ry+u*.02,u*.85,u*.5,0,Math.PI,0);c.closePath();fs(c,lg(c,0,cy-ry-u*.5,0,cy-ry,['#cfe8d6','#7fb596']),lw);
+ circ(c,cx,cy-ry-u*.55,u*.17);fs(c,'#3f7a5c',lw);
+ [cx-u*1.0,cx+u*1.0].forEach(px=>{const py=cy-u*.68;circ(c,px,py,u*.32);fs(c,'#f3ead6',lw);circ(c,px,py,u*.24);fs(c,lg(c,0,py-u*.24,0,py+u*.24,['#dff1fb','#7fb0cf']),lw*.6);
+  c.strokeStyle='#f3ead6';c.lineWidth=u*.04;c.beginPath();c.moveTo(px-u*.24,py);c.lineTo(px+u*.24,py);c.moveTo(px,py-u*.24);c.lineTo(px,py+u*.24);c.stroke()});
+ const sy=cy-u*.12;rr(c,cx-u*1.62,sy,u*3.24,u*.42,u*.06);fs(c,'#24493a',lw);
+ rr(c,cx-u*1.54,sy+u*.06,u*3.08,u*.3,u*.03);c.strokeStyle='#e8c873';c.lineWidth=Math.max(1,u*.02);c.stroke();
+ c.fillStyle='#e8c873';c.font=`700 ${u*.22}px Georgia,"Noto Serif TC",serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('茶飲 · TEA',cx,sy+u*.22);
+ c.strokeStyle='rgba(36,73,58,.45)';c.lineWidth=ink*.6;for(let k=0;k<7;k++){const px=cx-u*1.2+k*u*.4;c.beginPath();c.arc(px,sy+u*.62,u*.12,Math.PI,0);c.stroke()}
+ const dw=u*.88,dh=u*1.18,dx=cx-dw/2;c.beginPath();c.moveTo(dx,h);c.lineTo(dx,h-dh+dw/2);c.arc(cx,h-dh+dw/2,dw/2,Math.PI,0);c.lineTo(dx+dw,h);c.closePath();fs(c,'#24493a',lw);
+ c.beginPath();c.moveTo(dx+u*.08,h-u*.08);c.lineTo(dx+u*.08,h-dh+dw/2);c.arc(cx,h-dh+dw/2,dw/2-u*.08,Math.PI,0);c.lineTo(dx+dw-u*.08,h-u*.08);c.closePath();fs(c,lg(c,0,h-dh,0,h,['#fff1cf','#c99a5c']));
+ c.fillStyle='#e8c873';c.fillRect(dx+dw-u*.22,h-dh*.55,u*.05,u*.28);
+ [dx-u*.42,dx+dw+u*.14].forEach(px=>{rr(c,px,h-u*.32,u*.28,u*.3,u*.04);fs(c,'#3f7a5c',lw*.6);circ(c,px+u*.14,h-u*.5,u*.2);fs(c,lg(c,0,h-u*.7,0,h-u*.3,['#6cc46f','#2f7a3a']),lw*.6)});
+ return{bx:cx,by:cy-u*.68,br:u*.34};
+}
 function spriteSimpleShop(kind,u,dpr,city,brandId){
  const b=BLD[kind],w=b.w*u,h=(b.h+b.ex)*u,cv=mkc(w,h,dpr),c=cv.getContext('2d');
  const lw=Math.max(1.4,u*.035),fy=h-b.h*u,brand=kind==='store'?storeBrand(brandId):null;
  c.lineJoin='round';c.lineCap='round';
- c.fillStyle='rgba(20,30,40,.2)';c.fillRect(u*.18,h-u*.35,w-u*.36,u*.35);
- rr(c,u*.08,fy,w-u*.16,h-fy,u*.12);fs(c,kind==='store'?'#f3f5f7':kind==='coffee'?'#e2b889':'#d7a66e',lw);
- const sign=kind==='store'?(brand?.sign||'STORE'):kind==='coffee'?'COFFEE':'茶飲';
- rr(c,u*.22,fy+u*.16,w-u*.44,u*.46,u*.08);fs(c,kind==='store'?(brand?.primary||'#168447'):kind==='coffee'?'#5b3525':'#8a5634',lw*.8);
- c.fillStyle=kind==='store'?'#fffaf0':'#fff1d0';c.font=`900 ${u*(sign.length>7?.18:.24)}px system-ui,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(sign,w/2,fy+u*.39);
- const win=(x,y,ww,wh)=>{rr(c,x,y,ww,wh,u*.05);fs(c,lg(c,0,y,0,y+wh,['#dff4ff','#6fa8c8']),lw*.7);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(x+ww*.16,y+wh*.15,ww*.16,wh*.45)};
- win(u*.32,fy+u*.82,u*.82,u*.62);win(w-u*1.14,fy+u*.82,u*.82,u*.62);
- const dw=u*.88,dh=u*1.18,dx=w/2-dw/2;rr(c,dx,h-dh,dw,dh,u*.07);fs(c,kind==='store'?'#7fb5d7':kind==='coffee'?'#8a5a3b':'#6f9fc4',lw);
- c.strokeStyle='rgba(255,255,255,.65)';c.lineWidth=Math.max(1,u*.025);c.beginPath();c.moveTo(w/2,h-dh+u*.1);c.lineTo(w/2,h-u*.08);c.stroke();
- c.fillStyle='#ffd35a';c.beginPath();c.arc(dx+dw-u*.16,h-dh+dh*.55,u*.045,0,Math.PI*2);c.fill();
- if(kind==='coffee'){c.fillStyle='#fff1d0';c.font=`900 ${u*.15}px system-ui,sans-serif`;c.fillText('CAFE',w/2,fy+u*.62)}
+ const{bx,by,br}=kind==='tea'?teapotFront(c,u,w,h,lw):kind==='coffee'?mugFront(c,u,w,h,lw):storeFront(c,u,w,h,fy,lw,brand);
+ // 兩扇窗中間的圓招牌：超商是購物籃、茶飲是珍奶杯、咖啡是冒煙的咖啡杯，遠遠就分得出來
+ const ink=Math.max(1,u*.05);
+ circ(c,bx,by,br);fs(c,kind==='store'?brand.primary:kind==='coffee'?'#5b3525':'#fff6e0',lw);
+ circ(c,bx,by,br*.82);c.strokeStyle=kind==='store'?brand.secondary:kind==='coffee'?'#e2b889':'#8a5634';c.lineWidth=u*.04;c.stroke();
+ const s=br/(u*.42);
+ if(kind==='store'){c.strokeStyle='#ffffff';c.lineWidth=ink;c.beginPath();c.arc(bx,by-u*.02*s,u*.13*s,Math.PI,0);c.stroke();
+  c.beginPath();c.moveTo(bx-u*.22*s,by-u*.02*s);c.lineTo(bx+u*.22*s,by-u*.02*s);c.lineTo(bx+u*.15*s,by+u*.2*s);c.lineTo(bx-u*.15*s,by+u*.2*s);c.closePath();c.fillStyle='#ffffff';c.fill();
+  c.strokeStyle=brand.primary;c.lineWidth=ink*.6;[-.08,0,.08].forEach(k=>{c.beginPath();c.moveTo(bx+u*k*s,by+u*.04*s);c.lineTo(bx+u*k*.8*s,by+u*.16*s);c.stroke()})}
+ else if(kind==='tea'){c.strokeStyle='#ff5b4a';c.lineWidth=ink;c.beginPath();c.moveTo(bx+u*.03*s,by-u*.12*s);c.lineTo(bx+u*.11*s,by-u*.3*s);c.stroke();
+  c.beginPath();c.moveTo(bx-u*.16*s,by-u*.12*s);c.lineTo(bx+u*.16*s,by-u*.12*s);c.lineTo(bx+u*.12*s,by+u*.24*s);c.lineTo(bx-u*.12*s,by+u*.24*s);c.closePath();fs(c,lg(c,0,by-u*.12*s,0,by+u*.24*s,['#f3dcb6','#d9a066']),lw*.6);
+  c.strokeStyle='#8a5634';c.lineWidth=ink*.6;c.beginPath();c.moveTo(bx-u*.16*s,by-u*.05*s);c.lineTo(bx+u*.16*s,by-u*.05*s);c.stroke();
+  c.fillStyle='#3a2a22';[[-.06,.15],[.02,.17],[.08,.13],[-.02,.09]].forEach(([dx,dy])=>{circ(c,bx+u*dx*s,by+u*dy*s,u*.035*s);c.fill()})}
+ else{c.strokeStyle='#fff1d0';c.lineWidth=ink*.7;[-.07,.03].forEach(k=>{c.beginPath();c.moveTo(bx+u*k*s,by-u*.06*s);c.quadraticCurveTo(bx+u*(k+.06)*s,by-u*.14*s,bx+u*k*s,by-u*.2*s);c.quadraticCurveTo(bx+u*(k-.05)*s,by-u*.26*s,bx+u*(k+.02)*s,by-u*.32*s);c.stroke()});
+  c.strokeStyle='#ffffff';c.lineWidth=ink;c.beginPath();c.arc(bx+u*.14*s,by+u*.06*s,u*.07*s,-Math.PI/2,Math.PI/2);c.stroke();
+  rr(c,bx-u*.18*s,by-u*.03*s,u*.32*s,u*.22*s,u*.06*s);c.fillStyle='#ffffff';c.fill();
+  ell(c,bx-u*.02*s,by+u*.21*s,u*.24*s,u*.04*s);c.fill()}
  return cv;
 }
 

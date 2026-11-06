@@ -2,7 +2,7 @@
 // 新的物件類型只要在 OBJECTS 加一個項目，不用改繪圖引擎。
 import { CITIES } from '../data/index.js';
 import {
-  OUT, GT, BLD, FEX, rr, mkc, paintInterior,
+  OUT, GT, BLD, FEX, VENTS, rr, mkc, paintInterior,
   spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, spriteTable, spriteChair, drawChar, emblemImage,
 } from '../art.js';
 import { COLORS, pixelGround, pixelMaker as px } from '../render/pixel.js';
@@ -49,6 +49,20 @@ const makeShimmer = (_, u, dpr) => { const c = mkc(u * .34, u * .08, dpr), g = c
 const makeBubble = px((_, u, dpr) => { const c = mkc(u * .5, u * .54, dpr), g = c.getContext('2d'), m = u * .05;
   rr(g, m, m, u * .4, u * .44, u * .12); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OUT; g.stroke();
   g.fillStyle = '#ff5b4a'; g.font = `900 ${u * .36}px sans-serif`; g.textAlign = 'center'; g.fillText('!', m + u * .2, m + u * .34); return c });
+// 煙和熱氣：一顆柔邊的圓，畫的時候改變大小和透明度
+const makePuff = px((kind, u, dpr) => { const r = u * .5, c = mkc(r * 2, r * 2, dpr), g = c.getContext('2d'), gr = g.createRadialGradient(r * .8, r * .75, r * .1, r, r, r);
+  const [a, m, b] = kind === 'smoke' ? ['rgba(246,247,249,1)', 'rgba(168,175,188,.9)', 'rgba(140,148,162,0)'] : ['rgba(255,255,255,1)', 'rgba(214,226,238,.85)', 'rgba(214,226,238,0)'];
+  gr.addColorStop(0, a); gr.addColorStop(.5, a); gr.addColorStop(.82, m); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(0, 0, r * 2, r * 2); return c });
+// 每個出口同時有好幾顆在往上飄：剛冒出來小而淡，往上越來越大、被風吹偏，最後散掉
+function vent(v, now, x, y, kind, seed, depth) {
+  const U = v.U, smoke = kind === 'smoke', n = smoke ? 10 : 7, life = smoke ? 3400 : 2600, rise = smoke ? 2.4 : 1.4;
+  for (let i = 0; i < n; i++) {
+    const p = ((now + seed * 977) / life + i / n) % 1, fade = p < .06 ? p / .06 : 1 - (p - .06) / .94;
+    const r = U * (smoke ? .16 + p * .44 : .09 + p * .2), sway = Math.sin(p * 5 + i * 1.7 + seed) * U * (smoke ? .12 : .08);
+    const cx = x + sway + p * U * (smoke ? .55 : .15), cy = y - p * U * rise;
+    v.sprite('puff-' + kind, makePuff, kind, cx - r, cy - r, r * 2, r * 2, depth, Math.max(0, fade) * .95, FX_NONE);
+  }
+}
 const makeStepDust = px((_, u, dpr) => { const cv = mkc(u, u * .32, dpr), g = cv.getContext('2d');
   g.lineCap = 'round'; g.strokeStyle = 'rgba(92,77,57,.52)'; g.lineWidth = Math.max(1, u * .035);
   [[.2,.2,.12],[.42,.12,.09],[.68,.18,.13],[.82,.1,.07]].forEach(([x,y,r]) => { g.beginPath(); g.arc(x*u,y*u,r*u,Math.PI*1.05,Math.PI*1.85); g.stroke() }); return cv });
@@ -87,7 +101,8 @@ const OBJECTS = {
     if (bx - v.cam.x < -2 * U || bx - v.cam.x > v.cam.w + U || by - v.cam.y < -U || by - v.cam.y > v.cam.h + 3 * U) return;
     v.sprite(keyOf(o, o => 'tree-' + o.kind), makeTree, o.kind, bx + U / 2 - U, by - 2.42 * U, 2 * U, 2.5 * U, by) },
   bld(v, o) { const U = v.U, b = BLD[o.kind], by = (o.y + b.h) * U;
-    v.sprite(keyOf(o, o => `bld-${o.kind}-${o.brand || 'local'}`), makeBld, o, o.x * U, by - (b.h + b.ex) * U, b.w * U, (b.h + b.ex) * U, by) },
+    v.sprite(keyOf(o, o => `bld-${o.kind}-${o.brand || 'local'}`), makeBld, o, o.x * U, by - (b.h + b.ex) * U, b.w * U, (b.h + b.ex) * U, by);
+    (VENTS[o.kind] || []).forEach((p, i) => vent(v, v.now, (o.x + p.x) * U, by - (b.h + b.ex - p.y) * U, p.kind, o.x * 7 + o.y * 13 + i, o.y * U)) },  // 排在建築最後一排：人物站在建築前面時不會被煙蓋住
   lamp(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('lamp', makeLamp, null, o.x * U, by - 2 * U, U, 2 * U, by) },
   sign(v, o) { const U = v.U, by = (o.y + 1) * U;
     v.sprite(keyOf(o, o => 'sign-' + o.what), makeSign, o.what === 'gym' ? cur.city.roof : '#14b3a4', o.x * U, by - 1.12 * U, U, 1.2 * U, by) },
@@ -100,7 +115,7 @@ const OBJECTS = {
  */
 export function describeMap(v, now, st) {
   const map = st.map, U = v.U;
-  cur.map = map; cur.city = CITIES[map.ci]; cur.emblem = emblems[map.ci];
+  cur.map = map; cur.city = CITIES[map.ci]; cur.emblem = emblems[map.ci]; v.now = now;
 
   // 水面閃光
   const x0 = Math.max(0, Math.floor(v.cam.x / U)), y0 = Math.max(0, Math.floor(v.cam.y / U));

@@ -3,7 +3,7 @@ import { badgeSVG, drawAnimal } from '../art.js';
 import { leagueTier } from '../battle/league.js';
 import { ALLV } from '../content.js';
 import { $, esc } from '../core/util.js';
-import { ANIMALS, CITIES, LEAGUE, TW_PTS, UI } from '../data/index.js';
+import { ANIMALS, CITIES, LEAGUE, TW_PEAKS, TW_PTS, TW_RANGES, UI } from '../data/index.js';
 import { LI, T, Z, itemTr, rb, tr } from '../i18n.js';
 import { mode } from '../scene.js';
 import { bootBackdrop, titleScreen } from '../scenes/title.js';
@@ -23,7 +23,8 @@ export async function mainMenu(){if(mode!=='world')return;const keys=['map','par
  ({map:mapMenu,party:partyMenu,bag:bagMenu,badges:badgeMenu,dex:dexMenu,settings:settingsMenu})[keys[i]]()}
 function mapMenu(){const open=ci=>ci<=Math.min(S.badges,21);
  let svg=`<svg class="mapsvg" viewBox="-32 -8 134 172" role="img" aria-label="Taiwan map"><rect x="-32" y="-8" width="134" height="172" rx="8" fill="#c9ecff"/>
- <polygon points="${TW_PTS}" fill="#8bd36b" stroke="#1b2340" stroke-width="1.4"/><path d="M60 40 Q66 70 58 100 Q52 118 48 130" fill="none" stroke="#4fae54" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+ <polygon points="${TW_PTS}" fill="#8bd36b" stroke="#1b2340" stroke-width="1.4"/>${Object.entries(TW_RANGES).map(([k,pts])=>`<polyline points="${pts}" fill="none" stroke="#4f9a4a" stroke-width="${k==='central'?6:4}" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><polyline points="${pts}" fill="none" stroke="#7a6a3e" stroke-width="${k==='central'?1.4:1}" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/>`).join('')}
+ ${TW_PEAKS.map(([id,x,y])=>`<path d="M${x-2.2} ${y+1.6} L${x} ${y-2} L${x+2.2} ${y+1.6}Z" fill="${id==='yushan'?'#f4f1e8':'#8a7a4e'}" stroke="#1b2340" stroke-width=".5"/>`).join('')}
  <g fill="#8bd36b" stroke="#1b2340" stroke-width=".8"><circle cx="-14" cy="84" r="3"/><circle cx="-10" cy="88" r="2"/><circle cx="-17" cy="89" r="1.6"/></g>
  <g fill="none" stroke="#1b2340" stroke-width=".6" stroke-dasharray="2 1.5"><rect x="-29" y="-4" width="26" height="22" rx="3"/><rect x="-29" y="34" width="26" height="22" rx="3"/></g>
  <g fill="#8bd36b" stroke="#1b2340" stroke-width=".8"><ellipse cx="-16" cy="7" rx="4" ry="2.5"/><ellipse cx="-11" cy="3" rx="2" ry="1.5"/><path d="M-24 44 Q-18 38 -10 42 Q-8 48 -16 49 Q-22 50 -24 44Z"/></g>
