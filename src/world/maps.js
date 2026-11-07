@@ -6,15 +6,18 @@ import { CITIES, TRAINERS, WALKER_LINES } from '../data/index.js';
 import { STORE_BRANDS } from '../data/stores.js';
 import { MAP } from '../state.js';
 import { CLERK, guardLook, leaderLook, lookFromTrainer } from './looks.js';
+import { geographyFor } from './geography.js';
 
 const W=24;
 export const H=34;
+export const SIDE_GATE_Y=17;
 /*
  * 城鎮配置：每座城鎮都用同一套整齊的格子。
- *   y 0      北邊樹牆，只在大路（x 11–12）留入口；y 1 是牌樓
+ *   y 0      北邊地理邊界，只在大路（x 11–12）留入口；y 1 是牌樓
  *   y 2–6    道館、旅館        y 7–8   第一條街（門口都面向街道）
  *   y 9–12   超商、茶店、廟、民宅（超商、茶店、咖啡店同為 5×4）  y 13–14 第二條街
  *   y 15–32  南邊：小巷與空地、各城特色區、草叢（遇敵），大路一直通到南邊出口
+ * 東西兩側在 SIDE_GATE_Y 提供分區轉場，邊界材質由城市地理位置決定。
  * 城市之間的差別放在南邊：第二家超商、民宅、特色區、池塘、樹和草叢的位置。
  */
 const AVENUE=[11,12],STREETS=[7,8,13,14],LANE=20;
@@ -58,9 +61,31 @@ export function genMap(ci){const r=rng(ci*7919+13),city=CITIES[ci];const g=Array
  if(area==='market'){fillRect(3,22,8,3,GT.PD);[[3,21],[6,21],[9,21]].forEach(([x,y])=>{if(free(x,y))solid({type:'lamp',x,y})})}
  if(area==='park'){fillRect(15,22,7,4,GT.FL);[16,18,20].forEach(x=>{keep[24][x]=false;solid({type:'tree',x,y:24,kind:city.tree});keep[24][x]=true})}
  if(area==='rice'){fillRect(2,22,7,4,GT.TG);fillRect(15,23,7,4,GT.TG)}
- // 邊界樹：東西兩邊整排，南北只在大路留出口
- for(let y=0;y<H;y++)[0,W-1].forEach(x=>solid({type:'tree',x,y,kind:city.tree}));
- for(let x=1;x<W-1;x++){if(AVENUE.includes(x))continue;if(!blocked[0][x])solid({type:'tree',x,y:0,kind:city.tree});solid({type:'tree',x,y:H-1,kind:city.tree})}
+// 城市邊界跟著台灣地理：西部城市左側是海岸、右側是山；
+// 花東／北部城市則反過來。邊界本身不可通行，但入口保留一格沙灘或山徑，
+// 讓地區之間的轉場看起來像真正接在世界地圖上，而不是一圈通用樹牆。
+const geography=geographyFor(city);
+const paintBoundary=(side,x,terrain,gateY=null)=>{
+  for(let y=0;y<H;y++){
+    if(gateY===y){g[y][x]=GT.PD;keep[y][x]=true;continue}
+    if(terrain==='coast'){g[y][x]=GT.WA;block(x,y);}
+    else solid({type:'tree',x,y,kind:terrain==='mountain'?'pine':city.tree});
+  }
+};
+paintBoundary('west',0,geography.west,SIDE_GATE_Y);
+paintBoundary('east',W-1,geography.east,SIDE_GATE_Y);
+for(let x=1;x<W-1;x++){
+  if(AVENUE.includes(x))continue;
+  if(geography.north==='coast'){g[0][x]=GT.WA;block(x,0)}else solid({type:'tree',x,y:0,kind:geography.north==='mountain'?'pine':city.tree});
+  if(geography.south==='coast'){g[H-1][x]=GT.WA;block(x,H-1)}else solid({type:'tree',x,y:H-1,kind:geography.south==='mountain'?'pine':city.tree});
+}
+// Explicit west/east district transition points. The inner tile is reserved
+// so scenery generation can never seal the doorway.
+for(const x of [1,W-2]){
+  blocked[SIDE_GATE_Y][x]=false;
+  for(let i=objs.length-1;i>=0;i--)if(objs[i].x===x&&objs[i].y===SIDE_GATE_Y)objs.splice(i,1);
+  pave(x,SIDE_GATE_Y,GT.PD);g[SIDE_GATE_Y][x-1]=GT.PD;g[SIDE_GATE_Y][x+1]=GT.PD;
+}
  // 街邊花圃
  for(let i=0;i<14;i++){const x=1+Math.floor(r()*22),y=15+Math.floor(r()*2);if(free(x,y))g[y][x]=GT.FL}
  // 路線：高草叢（只長在空草地上）

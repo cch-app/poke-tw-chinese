@@ -9,11 +9,13 @@ import { mode, onModeChange, setMode } from '../scene.js';
 import { MAP, S, TOWN, save, setMap, setTown } from '../state.js';
 import { talkNpc, talkWalker } from '../town/services.js';
 import { CH, dialog } from '../ui/dialog.js';
-import { hud, showCityTag, toast } from '../ui/hud.js';
+import { hud, showCityTag, showRouteTag, toast } from '../ui/hud.js';
 import { closePanelQuiet } from '../ui/panel.js';
 import { playerLook, tdata, trainerLook } from './looks.js';
 import { describeMap, sceneFor } from './map-view.js';
-import { H, genInterior, genMap, isWalk } from './maps.js';
+import { H, SIDE_GATE_Y, genInterior, genMap, isWalk } from './maps.js';
+import { DISTRICT_GATE_Y, genDistrict } from './districts.js';
+import { PLACES, ROAD_X, ROUTE_H, genRoute, hasRoute, routeKm, zoneAt } from './routes.js';
 
 let mv=null,held=null,last=performance.now(),cut=null,bubble=null,stepsSince=0;
 let view=null;
@@ -49,11 +51,14 @@ function update(now){const dt=Math.min(50,now-last);last=now;
   MAP.trainers.forEach(t=>{if(S.beaten[t.id]||cut)return;t.turnT-=dt;if(t.turnT<=0){t.turnT=1800+Math.random()*2600;t.dir=Math.random()<.5?t.home:pick(['up','down','left','right']);if(!mv)checkSight()}})}
  if(cut)cut(dt)}
 function tryMove(dir){S.dir=dir;const[dx,dy]=DIRS[dir];const nx=S.x+dx,ny=S.y+dy;
+ if(MAP.kind==='town'&&ny===SIDE_GATE_Y&&(nx===0||nx===MAP.w-1)){held=null;enterDistrict(nx===0?'west':'east');return}
+ if(MAP.kind==='district'&&(ny===DISTRICT_GATE_Y||ny===DISTRICT_GATE_Y+1)&&(nx<0||nx>=MAP.w)){held=null;leaveDistrict(nx<0?'west':'east');return}
  if(ny<0||ny>=MAP.h){held=null;if(MAP.kind==='in'){if(ny>=MAP.h)leaveInterior();return}gate(ny<0?'top':'bottom');return}
  if(!isWalk(nx,ny))return;mv={fx:S.x,fy:S.y,tx:nx,ty:ny,t:0}}
 function onStep(){stepsSince++;const k=S.x+','+S.y;
  if(MAP.kind==='in'&&S.x===MAP.exit.x&&S.y===MAP.exit.y){held=null;leaveInterior();return}
  if(MAP.doors[k]){held=null;const dest=MAP.doors[k],kind=typeof dest==='string'?dest:dest.kind;if(kind==='house'){S.y++;S.dir='down';dialog([UI.houseLocked]);return}enterInterior(kind,S.x,S.y,dest.brand);return}
+ if(MAP.kind==='route'){const z=zoneAt(MAP,S.y);if(z!==MAP.here){MAP.here=z;placeToast()}}
  if(checkSight())return;
  if(MAP.g[S.y][S.x]===GT.TG&&stepsSince>2&&Math.random()<.13){stepsSince=0;held=null;startEncounter()}}
 function sightHits(t){if(S.beaten[t.id])return false;const[dx,dy]=DIRS[t.dir];for(let k=1;k<=4;k++){const x=t.x+dx*k,y=t.y+dy*k;if(x===S.x&&y===S.y)return k;if(x<0||y<0||x>=MAP.w||y>=MAP.h||MAP.blocked[y][x])return false}return false}
@@ -70,18 +75,57 @@ export function interact(){if(mode!=='world'||mv)return;const[dx,dy]=DIRS[S.dir]
  if(t){const d=tdata(t);t.dir=OPPOSITE[S.dir];
   if(S.beaten[t.id])dialog([d.lose],null,d.zh);else dialog([d.hi],()=>trainerBattle(t),d.zh);return}
  const o=MAP.objs.find(o=>o.x===fx&&o.y===fy);
+ if(o&&o.type==='sign'&&o.what==='route'){routeSign(o.zone);return}
  if(o&&o.type==='sign'){if(o.what==='gym')dialog([[`${c.zh}語言道館・館主${c.leader}・${c.theme}`,`${c.en} Gym · Leader ${c.leader} · ${tr(c.role)}`,`${c.ja}ジム・ジムリーダー${c.leader}・${tr(c.role)}`],[`${UI.recLv[0]}：Lv ${cityLv(S.city)+2}`,`${UI.recLv[1]}: Lv ${cityLv(S.city)+2}`,`${UI.recLv[2]}：Lv ${cityLv(S.city)+2}`]],null,UI.sign[0]);
   else dialog([[`歡迎來到${c.zh}！`,`Welcome to ${c.en}!`,`${c.ja}へようこそ！`]],null,UI.sign[0]);return}
  if(MAP.g[fy]?.[fx]===GT.WA)dialog([['水很清，可以看到小魚。',"The water is clear; you can see little fish.","水が澄んでいて、小魚が見える。"]])}
 function gate(side){const ci=S.city;
- if(side==='top'){if(ci===0){dialog([UI.airport]);return}travel(ci-1,'bottom')}
+ // 在城市之間的道路上：往上走回北邊那座城，往下走到南邊那座城
+ if(MAP.kind==='route'){const i=MAP.i;travel(side==='top'?i:i+1,side==='top'?'bottom':'top');return}
+ if(side==='top'){if(ci===0){dialog([UI.airport]);return}if(hasRoute(ci-1))enterRoute(ci-1,'bottom');else travel(ci-1,'bottom')}
  else{if(ci===21){dialog([S.badges>=22?UI.leagueGate:UI.needBadge]);return}
-  if(S.badges>ci)travel(ci+1,'top');else dialog([UI.needBadge])}}
+  if(S.badges<=ci){dialog([UI.needBadge]);return}
+  if(hasRoute(ci))enterRoute(ci,'top');else travel(ci+1,'top')}}
+/** Enter a local district connector without changing the current city. */
+function enterDistrict(side){
+  const city=S.city;
+  S.district={city,side};
+  setMap(genDistrict(city));
+  S.x=side==='west'?2:MAP.w-3;
+  S.y=DISTRICT_GATE_Y;
+  S.dir=side==='west'?'right':'left';
+  mv=null;held=null;showMap();save();closePanelQuiet();
+  toast([`${CITIES[city].zh}分區`,`${CITIES[city].en} district`,`${CITIES[city].ja}の地区`]);
+}
+
+/** Return to the same city's west/east district gate. */
+function leaveDistrict(side){
+  const city=S.city;
+  S.district=null;
+  setMap(genMap(city));
+  S.x=side==='west'?1:MAP.w-2;
+  S.y=SIDE_GATE_Y;
+  S.dir=side==='west'?'right':'left';
+  mv=null;held=null;showMap();save();showCityTag();
+}
+
+/** 走進城市之間的道路。S.city 維持在剛離開的城市（遇敵、昏倒回旅館都以它為準） */
+function enterRoute(i,arrive){S.route={i};S.district=null;setMap(genRoute(i));
+ if(arrive==='top'){S.x=ROAD_X;S.y=1;S.dir='down'}else{S.x=ROAD_X;S.y=ROUTE_H-2;S.dir='up'}
+ MAP.here=zoneAt(MAP,S.y);mv=null;held=null;showMap();save();closePanelQuiet();showRouteTag();placeToast()}
+/** 在道路上昏倒：回到剛離開的城市 */
+export const onRoute=()=>!!MAP&&(MAP.kind==='route'||MAP.kind==='district'||(MAP.kind==='in'&&TOWN&&TOWN.kind==='route'));
+export function returnToCity(){S.route=null;S.district=null;setMap(genMap(S.city));showMap();showCityTag()}
+/** 道路要用的地圖：存檔在道路上時也用它重建 */
+export const worldMap=()=>S.route?genRoute(S.route.i):S.district?genDistrict(S.city):genMap(S.city);
+function placeToast(){const p=PLACES[MAP.zones[MAP.here].key];toast(p)}
+function routeSign(z){const i=MAP.i,a=CITIES[i],b=CITIES[i+1],p=PLACES[MAP.zones[z].key],km=Math.max(1,Math.round(routeKm(i)*(1-z/MAP.zones.length)));
+ dialog([[`這裡是${p[0]}。`,`This is the ${p[1]}.`,`ここは${p[2]}。`],[`往南到${b.zh}還有${km}公里，往北回${a.zh}。`,`${b.en} is ${km} km south; ${a.en} is back north.`,`南の${b.ja}まであと${km}キロ、北へ戻ると${a.ja}。`]],null,UI.sign[0])}
 function transitLine(from,to){const a=CITIES[from],b=CITIES[to];
  if(a.island||b.island){const byAir=(a.id==='taipei'||b.id==='taipei'||a.id==='kinmen'&&b.id==='matsu'||a.id==='matsu'&&b.id==='kinmen');
   return byAir?[`坐飛機前往${b.zh}……`,`Flying to ${b.en}…`,`飛行機で${b.ja}へ……`]:[`坐船前往${b.zh}……`,`Taking the ferry to ${b.en}…`,`フェリーで${b.ja}へ……`]}
  return null}
-export function travel(ci,arrive){const from=S.city;if(MAP&&MAP.kind==='in')setMap(TOWN);S.city=ci;setMap(genMap(ci));
+export function travel(ci,arrive){const from=S.city;if(MAP&&MAP.kind==='in')setMap(TOWN);S.city=ci;S.route=null;S.district=null;setMap(genMap(ci));
  if(arrive==='top'){S.x=11;S.y=1;S.dir='down'}else if(arrive==='bottom'){S.x=11;S.y=H-2;S.dir='up'}else{S.x=MAP.inn.x;S.y=MAP.inn.y;S.dir='down'}
  mv=null;showMap();save();closePanelQuiet();showCityTag();hud();
  const t=transitLine(from,ci);if(t&&from!==ci)toast(t)}

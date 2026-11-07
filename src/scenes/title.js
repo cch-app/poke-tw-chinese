@@ -6,10 +6,10 @@ import { LI, T, Z, rb, tr } from '../i18n.js';
 import { setMode } from '../scene.js';
 import { S, fresh, load, maxFat, migrate, save, setMap, setPlayer, withSettings } from '../state.js';
 import { dialog } from '../ui/dialog.js';
-import { hud, showCityTag } from '../ui/hud.js';
+import { hud, showCityTag, showRouteTag } from '../ui/hud.js';
 import { playerLook } from '../world/looks.js';
 import { genMap } from '../world/maps.js';
-import { showMap } from '../world/overworld.js';
+import { showMap, worldMap } from '../world/overworld.js';
 import { flight, travelAnim } from './cutscenes.js';
 import { renderPixel } from '../render/pixel.js';
 
@@ -32,7 +32,7 @@ export function titleScreen(){setMode('title');const saved=load();if(saved&&save
 function restore(saved){setPlayer(Object.assign(fresh(saved.name),saved));migrate();S.settings=Object.assign(fresh('').settings,saved.settings||{},{lang:titleLang,ruby:titleRuby});S.bag=Object.assign({snack:0,drink:0,bubble:0,coffee:0},saved.bag||{})}
 let skipFly=false;
 function begin(isNew){migrate();const p=$('#panel');p.style.cssText='';p.innerHTML='';$('#ov').hidden=true;
- setMap(genMap(S.city));S.fat=clamp(S.fat,0,maxFat());showMap();hud();setMode('world');showCityTag();save();
+ setMap(worldMap());S.fat=clamp(S.fat,0,maxFat());showMap();hud();setMode('world');if(S.route)showRouteTag();else showCityTag();save();
  if(isNew){S.fat=maxFat();dialog(INTRO,null,'林老師')}}
 // 標題畫面背景：先畫一座城鎮
 export function bootBackdrop(){setPlayer({settings:{ruby:titleRuby,lang:titleLang},x:11,y:10,dir:'down',city:0,beaten:{},pets:[]});setMap(genMap(0));showMap()}

@@ -11,7 +11,7 @@ import { MAP, S, TOWN, has, innFee, maxFat, petLv, save, setMap } from '../state
 import { hud } from '../ui/hud.js';
 import { btn, openPanel } from '../ui/panel.js';
 import { playerLook } from '../world/looks.js';
-import { showMap } from '../world/overworld.js';
+import { onRoute, returnToCity, showMap } from '../world/overworld.js';
 import { renderPixel } from '../render/pixel.js';
 
 export let B=null;
@@ -69,5 +69,5 @@ export function runSeries(items,opts){let i=0;
   if(i>=items.length)return opts.end();
   const it=items[i];askQ(opts.make?opts.make(it):makeQ(it),()=>{i++;step()},(ok,textOnly)=>{markSeen(it,ok);if(ok){B.hits++;segs()}opts.onAns&&opts.onAns(ok);return score(it,ok,textOnly)})};
  step()}
-export function faint(){const fee=Math.min(S.money,innFee());S.money-=fee;S.fat=maxFat();if(MAP.kind==='in'){setMap(TOWN);showMap()}S.x=MAP.inn.x;S.y=MAP.inn.y;S.dir='down';save();hud();
+export function faint(){const fee=Math.min(S.money,innFee());S.money-=fee;S.fat=maxFat();if(onRoute())returnToCity();else if(MAP.kind==='in'){setMap(TOWN);showMap()}S.x=MAP.inn.x;S.y=MAP.inn.y;S.dir='down';save();hud();
  endCard(`<div class="qprompt">${Z('faint')}</div><div class="qprompt tlp">${T('faint')}</div><div class="note">${Z('faintMsg')} ${T('faintMsg')} · ${Z('fee')} NT$${fee}</div>`,toMapBtn())}

@@ -63,6 +63,14 @@ function vent(v, now, x, y, kind, seed, depth) {
     v.sprite('puff-' + kind, makePuff, kind, cx - r, cy - r, r * 2, r * 2, depth, Math.max(0, fade) * .95, FX_NONE);
   }
 }
+// 木橋：橫向木板加兩側欄杆，蓋在溪上的小路
+const makeBridge = px((o, u, dpr) => { const w = o.w * u, h = o.h * u, pad = u * .14, c = mkc(w + pad * 2, h + pad * 2, dpr), g = c.getContext('2d'), lw = Math.max(1, u * .03);
+  g.fillStyle = 'rgba(20,40,60,.25)'; g.fillRect(pad + u * .06, pad + u * .08, w, h);
+  rr(g, pad, pad - u * .04, w, h + u * .08, u * .04); g.fillStyle = '#9a6a3e'; g.fill(); g.lineWidth = lw; g.strokeStyle = OUT; g.stroke();
+  for (let y = 0; y < h; y += u * .25) { rr(g, pad + u * .06, pad + y + u * .02, w - u * .12, u * .2, u * .03); g.fillStyle = y / (u * .25) % 2 ? '#c4935e' : '#b8844f'; g.fill() }
+  [pad - u * .02, pad + w - u * .1].forEach(x => { g.fillStyle = '#6b4226'; g.fillRect(x, pad - u * .12, u * .12, h + u * .24); g.strokeStyle = OUT; g.lineWidth = lw; g.strokeRect(x, pad - u * .12, u * .12, h + u * .24);
+    for (let y = 0; y <= h; y += u * .5) { rr(g, x - u * .03, pad + y - u * .16, u * .18, u * .18, u * .04); g.fillStyle = '#4a2e1f'; g.fill() } });
+  return c });
 const makeStepDust = px((_, u, dpr) => { const cv = mkc(u, u * .32, dpr), g = cv.getContext('2d');
   g.lineCap = 'round'; g.strokeStyle = 'rgba(92,77,57,.52)'; g.lineWidth = Math.max(1, u * .035);
   [[.2,.2,.12],[.42,.12,.09],[.68,.18,.13],[.82,.1,.07]].forEach(([x,y,r]) => { g.beginPath(); g.arc(x*u,y*u,r*u,Math.PI*1.05,Math.PI*1.85); g.stroke() }); return cv });
@@ -106,6 +114,7 @@ const OBJECTS = {
   lamp(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('lamp', makeLamp, null, o.x * U, by - 2 * U, U, 2 * U, by) },
   sign(v, o) { const U = v.U, by = (o.y + 1) * U;
     v.sprite(keyOf(o, o => 'sign-' + o.what), makeSign, o.what === 'gym' ? cur.city.roof : '#14b3a4', o.x * U, by - 1.12 * U, U, 1.2 * U, by) },
+  bridge(v, o) { const U = v.U, pad = U * .14; v.sprite('bridge', makeBridge, o, o.x * U - pad, o.y * U - pad, o.w * U + pad * 2, o.h * U + pad * 2, o.y * U - U) },
   arch(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('arch', makeArch, null, o.x * U, by - 2.6 * U, 4 * U, 2.6 * U, by + U * .1) },
 };
 
