@@ -7,10 +7,41 @@ import {
 } from '../art.js';
 import { COLORS, pixelGround, pixelMaker as px } from '../render/pixel.js';
 import { paintPixelTown, tallGrass } from '../art/pixel-tiles.js';
+import { weatherAt } from './weather.js';
 
 // 美術一格 16 點；畫面上的格子取 16 的倍數，像素才會整齊
 const tileStep = (v, a, b) => Math.max(a, Math.min(b, v));
 const BG_TOWN = COLORS.green[1], BG_IN = COLORS.ink[0];
+
+function makeWeatherOverlay(arg, dpr){
+  const {w,h,weather,frame}=arg;
+  const cv=mkc(w,h,dpr),g=cv.getContext('2d');
+  const tint={night:'rgba(18,30,78,.34)',dawn:'rgba(255,174,104,.12)',sunset:'rgba(255,103,47,.2)',dusk:'rgba(72,56,112,.24)',scorching:'rgba(255,155,44,.12)'}[weather.phase];
+  if(tint){g.fillStyle=tint;g.fillRect(0,0,w,h)}
+  if(weather.kind==='sunny'){
+    const glow=g.createRadialGradient(w*.78,h*.12,0,w*.78,h*.12,Math.max(w,h)*.62);
+    glow.addColorStop(0,'rgba(255,238,166,.22)');glow.addColorStop(1,'rgba(255,238,166,0)');g.fillStyle=glow;g.fillRect(0,0,w,h);
+  }
+  if(weather.kind==='cloudy'){
+    g.fillStyle='rgba(170,190,208,.12)';g.fillRect(0,0,w,h);
+  }
+  if(weather.kind==='rain'||weather.kind==='storm'){
+    g.fillStyle=weather.kind==='storm'?'rgba(30,42,72,.15)':'rgba(74,122,170,.08)';g.fillRect(0,0,w,h);
+    g.strokeStyle=weather.kind==='storm'?'rgba(190,220,255,.62)':'rgba(210,238,255,.48)';
+    g.lineWidth=Math.max(1,w*.0018);g.lineCap='round';
+    const count=weather.kind==='storm'?Math.ceil(w/12):Math.ceil(w/20);
+    for(let i=0;i<count;i++){
+      const x=((i*47+frame*13)%(w+40))-20;
+      const y=((i*71+frame*29)%(h+40))-20;
+      g.beginPath();g.moveTo(x,y);g.lineTo(x-w*.018,y+h*.075);g.stroke();
+    }
+  }
+  if(weather.kind==='night'){
+    g.fillStyle='rgba(244,248,255,.7)';
+    for(let i=0;i<Math.ceil(w/80);i++)g.fillRect((i*83+frame*2)%w,(i*47)%Math.max(1,h),Math.max(1,w*.002),Math.max(1,w*.002));
+  }
+  return cv;
+}
 
 /* ---------- 徽章圖（SVG 載入完要重畫道館） ---------- */
 const emblems = [];
@@ -163,4 +194,11 @@ export function describeMap(v, now, st) {
   drawActor(v, p.x, p.y, st.look, p.dir, p.step, depth);
   const gx = Math.round(p.x), gy = Math.round(p.y);
   if (!p.moving && map.g[gy]?.[gx] === GT.TG) grassFront(v, gx, gy, depth);
+  if (map.kind !== 'in') {
+    const weather = weatherAt(new Date(), map.ci);
+    const frame = Math.floor(now / 180) % 8;
+    const w = Math.max(1, Math.round(v.cam.w)), h = Math.max(1, Math.round(v.cam.h));
+    const key = `weather-${weather.kind}-${weather.phase}-${frame}-${w}x${h}`;
+    v.sprite(key, makeWeatherOverlay, { w, h, weather, frame }, v.cam.x, v.cam.y, w, h, 1e9, 1, FX_NONE);
+  }
 }

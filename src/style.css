@@ -44,6 +44,23 @@ rt{font-family:"Noto Sans TC",sans-serif;font-size:.5em;font-weight:500;opacity:
 .num{font-size:11px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums;grid-column:2;text-align:right;margin-top:-2px}
 .side{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .pill{display:flex;gap:6px;align-items:center;padding:4px 10px;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums}
+.worldStatus{display:grid;grid-template-columns:1fr auto;gap:2px 10px;min-width:190px;padding:7px 10px;background:rgba(255,250,240,.94);border:2.5px var(--ink);border-radius:6px;box-shadow:0 3px 0 rgba(27,35,64,.16);font-variant-numeric:tabular-nums;text-align:right;line-height:1.2}
+.statusClockRow{display:flex;align-items:baseline;justify-content:flex-end;gap:7px;grid-column:1/-1}
+.statusLabel{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--ink-2)}
+.worldStatus .clockTime{font-size:18px;font-weight:900;letter-spacing:.03em}
+.worldStatus .clockDate{grid-column:1/-1;font-size:11px;color:var(--ink-2);white-space:nowrap}
+.clockWeather{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-top:3px;padding-top:5px;border-top:1px solid rgba(61,71,102,.28);font-size:12px;white-space:nowrap}
+.weatherCopy{display:flex;align-items:baseline;gap:6px}
+.weatherName{font-weight:900}
+.weatherSub{font-size:11px;color:var(--ink-2)}
+.weatherMark{position:relative;width:15px;height:15px;display:inline-block;flex:none;color:var(--teal)}
+.weatherMark::before,.weatherMark::after{content:"";position:absolute;display:block}
+.weatherMark::before{left:2px;top:2px;width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 0 2px rgba(255,255,255,.72)}
+.weatherMark::after{left:1px;bottom:-1px;width:13px;height:4px;border-bottom:2px solid currentColor;border-radius:50%}
+.worldStatus[data-weather="sunny"] .weatherMark,.worldStatus[data-weather="scorching"] .weatherMark,.worldStatus[data-weather="sunset"] .weatherMark{color:var(--sun)}
+.worldStatus[data-weather="rain"] .weatherMark,.worldStatus[data-weather="storm"] .weatherMark{color:var(--sky)}
+.worldStatus[data-weather="cloudy"] .weatherMark,.worldStatus[data-weather="dusk"] .weatherMark{color:var(--ink-2)}
+.worldStatus[data-weather="night"] .weatherMark{color:#5a6bb5}
 .btnrow{display:flex;gap:6px}
 .hbtn{background:#fffaf0;border:2.5px solid var(--ink);border-radius:4px;padding:5px 10px;font-weight:800;font-size:13px;box-shadow:0 3px 0 rgba(27,35,64,.3);line-height:1.6}
 .hbtn.go{background:var(--coral);color:#fffaf0}
@@ -224,4 +241,4 @@ input::placeholder{color:#6b7596;-webkit-text-fill-color:#6b7596}
 .field .flbl{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px}
 .field .flbl .tl{display:inline}
 /* 開始選單打開時，右上角的按鈕藏起來（選單本身就在那個位置） */
-body:has(.choice.start) .hud{visibility:hidden}
+ body:has(.choice.start) .hud{visibility:hidden} @media (max-width:520px){.worldStatus{min-width:0;width:min(190px,calc(100vw - 24px));padding:6px 8px}.worldStatus .clockTime{font-size:16px}.weatherSub{display:none}.clockWeather{gap:5px}}
