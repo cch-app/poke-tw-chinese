@@ -122,7 +122,12 @@ export function genRoute(i) {
       if (spots.length) { const [x, y, dir] = spots[0], k = trainers.length; g[y][x] = GT.G; keep[y][x] = true;
         trainers.push({ id: `r${i}-${k}`, x, y, dir, home: dir, cls: Math.floor(r() * TRAINERS.length), lv: cityLv(i) + 1 + Math.min(2, k), turnT: 1500 + r() * 2500 }) }
     }
-    if (key === 'forest') for (let y = y0; y <= y1; y++) for (let x = 1; x < W - 1; x++) if (r() < .32) tree(x, y, r() < .5 ? 'pine' : from.tree);
+    if (key === 'forest') {
+      for (let y = y0; y <= y1; y++) for (let x = 1; x < W - 1; x++) if (r() < .32) tree(x, y, r() < .5 ? 'pine' : from.tree);
+      // 林道的路燈：最後才放在小路轉彎旁邊的空地，夜裡登山客看得到路，原本的樹和訓練家位置都不變
+      const lampBy = (x, y) => { for (const [dx, dy] of [[-1, -1], [2, -1], [-1, 2], [2, 2], [-1, 0], [2, 0], [-1, 1], [2, 1]]) if (free(x + dx, y + dy)) return solid({ type: 'lamp', x: x + dx, y: y + dy }) };
+      [[xa, y0 + 2], [xa, ym], [zn.xb, ym], [zn.xb, y1 - 2]].forEach(([x, y]) => lampBy(x, y));
+    }
   });
 
   // Route edges inherit the geography of the city they leave, so a western

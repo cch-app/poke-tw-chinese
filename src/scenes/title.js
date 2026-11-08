@@ -24,19 +24,19 @@ export function titleScreen(){setMode('title');const saved=load();if(saved&&save
   ${saved?`<button class="btn sun" id="cont" data-autofocus>${Z('cont')}<span class="tl">${T('cont')} · ${esc(saved.name)} Lv ${saved.lv} · ★${saved.badges}</span></button>`:''}
   <label class="field inline" for="nameIn"><span class="nmlbl">${Z('name')}<span class="tl">${T('name')}</span></span><input type="text" id="nameIn" maxlength="10" value="${saved?esc(saved.name):'旅人'}" autocomplete="off"></label>
   <button class="btn" id="newG" ${saved?'':'data-autofocus'}>${Z('newGame')}<span class="tl">${T('newGame')}</span></button></div>`);
- $('#panel').innerHTML='';$('#ov').hidden=false;const p=$('#panel');p.style.cssText='background:none;border:none;box-shadow:none;display:flex;justify-content:center';p.innerHTML=html;
+$('#panel').innerHTML='';$('#ov').hidden=false;const p=$('#panel');p.classList.add('chrome-free');p.style.cssText='background:none;border:none;box-shadow:none;display:flex;justify-content:center';p.innerHTML=html;
  p.querySelectorAll('[data-tl]').forEach(b=>b.onclick=()=>{titleTouched=true;titleLang=b.dataset.tl;titleScreen()});p.querySelectorAll('[data-tr]').forEach(b=>b.onclick=()=>{titleTouched=true;titleRuby=b.dataset.tr;titleScreen()});
  p.querySelectorAll('[data-gd]').forEach(b=>b.onclick=()=>{titleGender=b.dataset.gd;titleScreen()});{const gc=$('#gdPrev');if(gc)renderPixel(gc,60,75,2,3,g=>drawChar(g,30,73,55,playerLook(titleGender),'down',0))}
- const c=$('#cont');if(c)c.onclick=()=>{restore(saved);begin(false)};
+const c=$('#cont');if(c)c.onclick=()=>{p.classList.remove('chrome-free');restore(saved);begin(false)};
  $('#newG').onclick=()=>{setPlayer(fresh(($('#nameIn').value||'旅人').trim().slice(0,10)));S.settings.lang=titleLang;S.settings.ruby=titleRuby;S.gender=titleGender;$('#ov').hidden=true;$('#panel').innerHTML='';if(skipFly)begin(true);else flight(()=>begin(true))}}
 function restore(saved){setPlayer(Object.assign(fresh(saved.name),saved));migrate();S.settings=Object.assign(fresh('').settings,saved.settings||{},{lang:titleLang,ruby:titleRuby});S.bag=Object.assign({snack:0,drink:0,bubble:0,coffee:0},saved.bag||{})}
 let skipFly=false;
-function begin(isNew){migrate();const p=$('#panel');p.style.cssText='';p.innerHTML='';$('#ov').hidden=true;
+function begin(isNew){migrate();const p=$('#panel');p.classList.remove('chrome-free');p.style.cssText='';p.innerHTML='';$('#ov').hidden=true;
  setMap(worldMap());S.fat=clamp(S.fat,0,maxFat());showMap();hud();setMode('world');if(S.route)showRouteTag();else showCityTag();save();
  if(isNew){S.fat=maxFat();dialog(INTRO,null,'林老師')}}
 // 標題畫面背景：先畫一座城鎮
 export function bootBackdrop(){setPlayer({settings:{ruby:titleRuby,lang:titleLang},x:11,y:10,dir:'down',city:0,beaten:{},pets:[]});setMap(genMap(0));showMap()}
-function askResume(sv){const c=CITIES[sv.city]||CITIES[0];const p=$('#panel');p.style.cssText='background:none;border:none;box-shadow:none;display:flex;justify-content:center';$('#ov').hidden=false;setMode('title');
+function askResume(sv){const c=CITIES[sv.city]||CITIES[0];const p=$('#panel');p.classList.add('chrome-free');p.style.cssText='background:none;border:none;box-shadow:none;display:flex;justify-content:center';$('#ov').hidden=false;setMode('title');
  const L=[`歡迎回來，${sv.name}！要搭計程車到上次存檔的地方嗎？`,`Welcome back, ${sv.name}! Take a taxi to where you last saved?`,`おかえり、${sv.name}！前回セーブした場所までタクシーで行く？`];
  p.innerHTML=`<div class="title"><div class="eyebrow">TAIWAN MANDARIN</div><div class="qprompt sm">${rb(L[0])}</div><div class="tl">${esc(L[LI()])}</div>
   <div class="row" style="justify-content:center;gap:14px"><div style="width:72px">${badgeSVG(Math.max(0,sv.badges-1),sv.badges>0)}</div><div style="text-align:left"><div style="font-weight:900;font-size:20px;font-family:var(--f-zh);line-height:2">${rb(c.zh)}</div><div class="note">${esc(LI()===2?c.ja:c.en)} · ${esc(sv.name)} Lv ${sv.lv} · ★ ${sv.badges}/22</div></div></div>

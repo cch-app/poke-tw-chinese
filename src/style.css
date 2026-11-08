@@ -243,3 +243,20 @@ input::placeholder{color:#6b7596;-webkit-text-fill-color:#6b7596}
 .field .flbl .tl{display:inline}
 /* 開始選單打開時，右上角的按鈕藏起來（選單本身就在那個位置） */
  body:has(.choice.start) .hud{visibility:hidden} @media (max-width:520px){.worldStatus{min-width:0;width:min(190px,calc(100vw - 24px));padding:6px 8px}.worldStatus .clockTime{font-size:16px}.weatherSub{display:none}.clockWeather{gap:5px}}
+
+/* The title/resume prompt is intentionally a single card; remove the legacy outer frame. */
+#panel.chrome-free{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+
+/* A compact moon glyph mirrors the date-driven phase shown beside the label. */
+.worldStatus[data-weather="night"] .weatherMark{color:#f0d48a}
+.worldStatus[data-weather="night"] .weatherMark::before{left:2px;top:2px;width:11px;height:11px;background:currentColor;box-shadow:none}
+.worldStatus[data-weather="night"] .weatherMark::after{left:0;top:2px;bottom:auto;width:11px;height:11px;border:0;border-radius:50%;background:var(--paper)}
+.worldStatus[data-weather="night"][data-moon="new"] .weatherMark::before{background:transparent;border:1px solid currentColor}
+.worldStatus[data-weather="night"][data-moon="new"] .weatherMark::after{display:none}
+.worldStatus[data-weather="night"][data-moon="waxing-crescent"] .weatherMark::after{left:-2px}
+.worldStatus[data-weather="night"][data-moon="first-quarter"] .weatherMark::after{left:-2px;width:7px;border-radius:0}
+.worldStatus[data-weather="night"][data-moon="waxing-gibbous"] .weatherMark::after{left:-1px;width:7px}
+.worldStatus[data-weather="night"][data-moon="full"] .weatherMark::after{display:none}
+.worldStatus[data-weather="night"][data-moon="waning-gibbous"] .weatherMark::after{left:7px;width:7px}
+.worldStatus[data-weather="night"][data-moon="third-quarter"] .weatherMark::after{left:8px;width:7px;border-radius:0}
+.worldStatus[data-weather="night"][data-moon="waning-crescent"] .weatherMark::after{left:7px}

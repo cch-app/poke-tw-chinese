@@ -89,6 +89,11 @@ export function genDistrict(ci, side = 'east') {
     }
   };
   const lamps = (us, y) => us.forEach(u => { if (free(u, y)) solid(u, y, { type: 'lamp' }) });
+  // A trail lamp goes on the first free tile around a 2×2 bend of the path.
+  const trailLamps = [];
+  const AROUND = [[-1, -1], [2, -1], [-1, 2], [2, 2], [-1, 0], [2, 0], [-1, 1], [2, 1], [0, -1], [1, -1], [0, 2], [1, 2]];
+  const lampBy = (u, y, taken) => { for (const [du, dy] of AROUND) { const uu = u + du, yy = y + dy;
+    if (free(uu, yy) && !taken.has(X(uu) + ',' + yy)) { set(uu, yy, GT.G); solid(uu, yy, { type: 'lamp' }); return } } };
 
   if (kind === 'beach' || kind === 'harbor') {
     // The coastline wanders a little; everything past it is sea.
@@ -139,6 +144,7 @@ export function genDistrict(ci, side = 'east') {
     const vert = (u, y0, y1) => { for (let y = Math.min(y0, y1); y <= Math.max(y0, y1) + 1; y++) { pave(u, y, GT.PD); pave(u + 1, y, GT.PD) } };
     const horiz = (u0, u1, y) => { for (let u = Math.min(u0, u1); u <= Math.max(u0, u1) + 1; u++) { pave(u, y, GT.PD); pave(u, y + 1, GT.PD) } };
     horiz(11, a, GY); vert(a, GY, top); horiz(a, b, top); vert(b, top, bottom); horiz(b, c, bottom); vert(c, bottom, GY);
+    trailLamps.push([a, GY], [a, top], [b, top], [b, bottom], [c, bottom]);
     if (link) { horiz(c, W - 2, GY); sign(W - 3, GY - 1, { what: 'link' }) }
     else { for (let y = GY - 1; y <= GY + 2; y++) for (let u = c + 1; u <= c + 3; u++) pave(u, y, GT.PD); sign(c + 3, GY - 1, { what: 'lookout' }) }
     sign(12, GY + 2, { what: 'trail' });
@@ -175,6 +181,10 @@ export function genDistrict(ci, side = 'east') {
     if (g[y][x] === GT.TG) g[y][x] = GT.G;
     trainers.push({ id: `d${ci}${side[0]}-${k}`, x, y, dir, home: dir, cls: Math.floor(r() * TRAINERS.length), lv: cityLv(ci) + 1 + k, turnT: 1700 + r() * 2400 });
   });
+  // Lamps at the trail's bends so climbers can see the path at night. Placed last,
+  // so the trees, rocks and trainers already generated stay exactly where they were.
+  const taken = new Set(trainers.map(t => t.x + ',' + t.y));
+  trailLamps.forEach(([u, y]) => lampBy(u, y, taken));
 
   return {
     kind: 'district', ci, side, place: kind, link, w: W, h: H, g, blocked, objs,

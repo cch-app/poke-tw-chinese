@@ -4,18 +4,21 @@ import { CITIES } from '../data/index.js';
 import { LI, Z, rb } from '../i18n.js';
 import { S, maxFat } from '../state.js';
 import { localClock, requestLiveWeather, weatherAt } from '../world/weather.js';
+import { moonState } from '../world/moon.js';
 
 let clockT, weatherT;
 function updateClock(){
   if(!S)return;
   const el=$('#clock');
   if(!el)return;
-  const now=new Date(),clock=localClock(now),weather=weatherAt(now,S.city);
+ const now=new Date(),clock=localClock(now),weather=weatherAt(now,S.city),moon=weather.phase==='night'?moonState(now):null;
   el.dataset.weather=weather.phase==='night'?'night':weather.kind;
+ el.dataset.moon=moon?.phase||'';
   el.dataset.source=weather.source;
   const temperature=Number.isFinite(weather.temperature)?` · ${Math.round(weather.temperature)}°C`:'';
   const source=weather.source==='live'?'LIVE':'AUTO';
-  el.innerHTML=`<div class="statusClockRow"><span class="statusLabel">LOCAL · ${source}</span><time class="clockTime" datetime="${now.toISOString()}">${esc(clock.time)}</time></div><div class="clockDate">${esc(clock.date)}</div><div class="clockWeather"><span class="weatherMark" aria-hidden="true"></span><span class="weatherCopy"><span class="weatherName">${rb(weather.label[0])}</span><span class="weatherSub">${esc(weather.label[LI()]+temperature)}</span></span></div>`;
+ const labels=moon?moon.labels:weather.label;
+ el.innerHTML=`<div class="statusClockRow"><span class="statusLabel">LOCAL · ${source}</span><time class="clockTime" datetime="${now.toISOString()}">${esc(clock.time)}</time></div><div class="clockDate">${esc(clock.date)}</div><div class="clockWeather"><span class="weatherMark" aria-hidden="true"></span><span class="weatherCopy"><span class="weatherName">${rb(labels[0])}</span><span class="weatherSub">${esc(labels[LI()]+temperature)}</span></span></div>`;
 }
 
 export function hud(){if(!S)return;$('#hud').hidden=false;

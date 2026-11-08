@@ -5,7 +5,7 @@ import {
   OUT, GT, BLD, FEX, VENTS, rr, mkc, paintInterior,
   spriteTree, spriteLamp, spriteSign, spriteArch, spriteBuilding, spriteFurn, spriteTable, spriteChair, drawChar, emblemImage,
 } from '../art.js';
-import { COLORS, pixelGround, pixelMaker as px } from '../render/pixel.js';
+import { ART_TILE, COLORS, pixelGround, pixelMaker as px } from '../render/pixel.js';
 import { paintPixelTown, tallGrass } from '../art/pixel-tiles.js';
 import { weatherAt } from './weather.js';
 
@@ -13,10 +13,16 @@ import { weatherAt } from './weather.js';
 const tileStep = (v, a, b) => Math.max(a, Math.min(b, v));
 const BG_TOWN = COLORS.green[1], BG_IN = COLORS.ink[0];
 
-function makeWeatherOverlay(arg, dpr){
+const PHASE_TINT={night:'rgba(10,20,62,.12)',dawn:'rgba(255,174,104,.12)',sunset:'rgba(255,103,47,.2)',dusk:'rgba(72,56,112,.3)',scorching:'rgba(255,155,44,.12)'};
+const KIND_TINT={cloudy:'rgba(170,190,208,.12)',rain:'rgba(74,122,170,.08)',storm:'rgba(30,42,72,.15)'};
+// 夜色：先偏藍（白天的配色換成夜裡的色調），再整體壓暗
+const NIGHT_WASH=['rgba(25,42,92,.24)','rgba(5,13,38,.30)'];
+/** 夜裡蓋在畫面上的所有半透明色層，依序；重畫燈光前面的東西時照樣蓋一次 */
+const nightWash=weather=>[PHASE_TINT.night,...(KIND_TINT[weather.kind]?[KIND_TINT[weather.kind]]:[]),...NIGHT_WASH];
+function makeWeatherOverlay(arg, _u, dpr){
   const {w,h,weather,frame}=arg;
   const cv=mkc(w,h,dpr),g=cv.getContext('2d');
-  const tint={night:'rgba(10,20,62,.62)',dawn:'rgba(255,174,104,.12)',sunset:'rgba(255,103,47,.2)',dusk:'rgba(72,56,112,.3)',scorching:'rgba(255,155,44,.12)'}[weather.phase];
+  const tint=PHASE_TINT[weather.phase];
   if(tint){g.fillStyle=tint;g.fillRect(0,0,w,h)}
   if(weather.phase==='dawn'||weather.phase==='sunset'){
     const warm=g.createLinearGradient(0,0,0,h);
@@ -29,10 +35,10 @@ function makeWeatherOverlay(arg, dpr){
     glow.addColorStop(0,'rgba(255,238,166,.22)');glow.addColorStop(1,'rgba(255,238,166,0)');g.fillStyle=glow;g.fillRect(0,0,w,h);
   }
   if(weather.kind==='cloudy'){
-    g.fillStyle='rgba(170,190,208,.12)';g.fillRect(0,0,w,h);
+    g.fillStyle=KIND_TINT.cloudy;g.fillRect(0,0,w,h);
   }
   if(weather.kind==='rain'||weather.kind==='storm'){
-    g.fillStyle=weather.kind==='storm'?'rgba(30,42,72,.15)':'rgba(74,122,170,.08)';g.fillRect(0,0,w,h);
+    g.fillStyle=KIND_TINT[weather.kind];g.fillRect(0,0,w,h);
     g.strokeStyle=weather.kind==='storm'?'rgba(190,220,255,.62)':'rgba(210,238,255,.48)';
     g.lineWidth=Math.max(1,w*.0018);g.lineCap='round';
     const count=weather.kind==='storm'?Math.ceil(w/12):Math.ceil(w/20);
@@ -41,16 +47,6 @@ function makeWeatherOverlay(arg, dpr){
       const y=((i*71+frame*29)%(h+40))-20;
       g.beginPath();g.moveTo(x,y);g.lineTo(x-w*.018,y+h*.075);g.stroke();
     }
-  }
-  if(weather.phase==='night'){
-    // Crescent moon and sparse stars make nighttime legible even when the
-    // two-hour weather roll is cloudy. The cloud/rain overlay remains on top.
-    const mx=w*.82,my=h*.16,mr=Math.max(11,Math.min(w,h)*.045);
-    g.save();g.globalAlpha=(weather.kind==='cloudy'||weather.kind==='storm')?.58:.92;
-    g.fillStyle='#fff4c2';g.beginPath();g.arc(mx,my,mr,0,Math.PI*2);g.fill();
-    g.globalCompositeOperation='destination-out';g.beginPath();g.arc(mx+mr*.38,my-mr*.2,mr*.9,0,Math.PI*2);g.fill();g.restore();
-    g.fillStyle='rgba(244,248,255,.7)';
-    for(let i=0;i<Math.ceil(w/80);i++)g.fillRect((i*83+frame*2)%w,(i*47)%Math.max(1,h),Math.max(1,w*.002),Math.max(1,w*.002));
   }
   return cv;
 }
@@ -62,17 +58,47 @@ function emblem(ci, onLoad) {
   return emblems[ci];
 }
 
+/* ---------- 當地時間與天氣：每分鐘算一次 ---------- */
+function ambientOf(map) {
+  const bucket = Math.floor(Date.now() / 60000);
+  let a = map.ambientCache;
+  if (!a || a.bucket !== bucket) {
+    const date = new Date();
+    a = map.ambientCache = { bucket, date, weather: weatherAt(date, map.ci) };
+  }
+  return a;
+}
+
+// 夜裡的路面：白天的石板、柏油顏色太亮，蓋一層偏藍的乘色，紋路保留、亮度壓下來
+const NIGHT_STREET = '#7484b4';
+const isStreet = t => t === GT.PB || t === GT.PD || t === GT.PR;
+function nightStreets(cv, m) {
+  const g = cv.getContext('2d');
+  g.save(); g.globalCompositeOperation = 'multiply'; g.fillStyle = NIGHT_STREET;
+  for (let y = 0; y < m.length; y++) for (let x = 0; x < m[y].length; x++) if (isStreet(m[y][x])) g.fillRect(x * ART_TILE, y * ART_TILE, ART_TILE, ART_TILE);
+  g.restore();
+  return cv;
+}
+// 地面只在換地圖時畫一次；日夜交替時由 describeMap 排一次重畫
+let repaintGround = null;
+
 /** 地面與尺寸；onAsset 在非同步圖片載入後呼叫（應該重畫）。 */
 export function sceneFor(map, onAsset) {
   const indoor = map.kind === 'in', city = CITIES[map.ci];
   const img = emblem(map.ci, onAsset);
+  repaintGround = indoor ? null : () => onAsset(map.ci);
+  const paintTown = () => {
+    const cv = paintPixelTown(map.g, map.ci);
+    map.groundNight = ambientOf(map).weather.phase === 'night';
+    return map.groundNight ? nightStreets(cv, map.g) : cv;
+  };
   return {
     w: map.w, h: map.h,
     background: indoor ? BG_IN : BG_TOWN,
     tileSize: (vw, vh) => indoor ? tileStep(Math.min(vw / 8.5, vh / 9.5), 48, 80) : tileStep(Math.min(vw / 12, vh / 9), 32, 64),
     // 城鎮地面直接用調色盤畫；室內有家具和招牌字，畫好再收成四色
     paint: (u, gd) => indoor ? pixelGround((t, d) => paintInterior(map, t, d, city, img), u, gd)
-      : pixelGround(() => paintPixelTown(map.g, map.ci), u, gd, { native: true }),
+      : pixelGround(paintTown, u, gd, { native: true }),
   };
 }
 
@@ -198,9 +224,87 @@ const OBJECTS = {
  * 每格呼叫一次。
  * st: { map, player: { x, y, dir, step, moving }, look, trainerLook(t), bubble }
  */
+function makeNightOverlay(arg, _u, dpr) {
+  const { w, h, weather } = arg;
+  const cv = mkc(w, h, dpr), g = cv.getContext('2d');
+  const night = weather.phase === 'night';
+  const twilight = weather.phase === 'dusk' || weather.phase === 'dawn';
+  if (!night && !twilight) return cv;
+
+  // Keep the existing weather effects, then add a dedicated lighting pass so
+  // every town, route, and district receives the same local-time treatment.
+  for (const c of night ? NIGHT_WASH : ['rgba(37, 27, 76, .16)']) { g.fillStyle = c; g.fillRect(0, 0, w, h) }
+  // 俯視的地圖上看不到天空，所以不畫星星和月亮
+  return cv;
+}
+
+// 夜裡亮燈的窗戶：把建築重畫一次，窗戶用的顏色（淡藍玻璃、暖黃窗紙）一律換成洋紅色當記號，
+// 有記號的地方換成暖黃色燈光、其他地方透明，再加一圈柔光。這張蓋在夜色上面，窗戶才是真的亮著。
+const MARK = '#ff00ff';
+const isGlass = (r, g, b) => r >= 95 && g >= 150 && b >= 185 && b - r >= 25 && b >= g;
+const rgbOf = css => { const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$|^rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/i.exec(css);
+  return !m ? null : m[1] ? [m[1], m[2], m[3]].map(h => parseInt(h, 16)) : [+m[4], +m[5], +m[6]] };
+const isWindowColor = css => { if (typeof css !== 'string') return false; const c = rgbOf(css); return !!c && (isGlass(...c) || css.toLowerCase() === '#fff1cf') };
+function windowMask(draw) {
+  const G = CanvasGradient.prototype, addStop = G.addColorStop, C = CanvasRenderingContext2D.prototype, fill = Object.getOwnPropertyDescriptor(C, 'fillStyle');
+  // 漸層看第一個色標：從玻璃色或窗紙色開始的就是窗戶
+  G.addColorStop = function (o, c) { if (o === 0) this._win = isWindowColor(c); return addStop.call(this, o, this._win ? MARK : c) };
+  Object.defineProperty(C, 'fillStyle', { ...fill, set(v) { fill.set.call(this, isWindowColor(v) ? MARK : v) } });
+  try { return draw() } finally { G.addColorStop = addStop; Object.defineProperty(C, 'fillStyle', fill) }
+}
+function windowLight(src, u, dpr) {
+  const W = src.width, H = src.height, img = src.getContext('2d').getImageData(0, 0, W, H), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // 洋紅色（含被窗上反光、窗框邊緣混到的）就是窗戶
+    if (!d[i + 3] || d[i] < 180 || d[i + 2] < 180 || d[i + 1] > d[i] - 70) { d[i + 3] = 0; continue }
+    const k = (d[i + 1] / (d[i] - 1)) || 0;  // 窗上原本有反光的地方燈光比較白
+    d[i] = 255; d[i + 1] = 206 + 40 * k; d[i + 2] = 118 + 80 * k; d[i + 3] = 255;
+  }
+  const sharp = document.createElement('canvas'); sharp.width = W; sharp.height = H; sharp.getContext('2d').putImageData(img, 0, 0);
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
+  const g = out.getContext('2d');
+  g.filter = `blur(${Math.max(1, u * dpr * .07)}px)`; g.globalAlpha = .7; g.drawImage(sharp, 0, 0);
+  g.filter = 'none'; g.globalAlpha = 1; g.drawImage(sharp, 0, 0);
+  return out;
+}
+const makeBldLight = px((o, u, dpr) => windowLight(windowMask(() => spriteBuilding(o.kind, u, dpr, cur.city, cur.emblem, o.brand)), u, dpr));
+// 同一張貼圖再蓋一次夜色：站在亮窗前面的人和東西要重畫在燈光上面，窗戶的光才不會透過去
+const tinted = new WeakMap();
+function nightTinted(make) {
+  let t = tinted.get(make);
+  if (!t) tinted.set(make, t = (a, u, dpr) => { const cv = make(a.arg, u, dpr), g = cv.getContext('2d');
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop';
+    for (const c of a.wash) { g.fillStyle = c; g.fillRect(0, 0, cv.width, cv.height) }
+    g.restore(); return cv });
+  return t;
+}
+
+// 路燈亮起來：燈頭一圈暖光、腳下一片橢圓光暈。貼圖寬 3 格、高 2.6 格，
+// 燈柱在正中間，底邊往上 .5 格是燈柱腳（地面），燈頭在柱腳上方 1.64 格。
+const LAMP_GLOW_W = 3, LAMP_GLOW_H = 2.6, LAMP_BASE = 2.1, LAMP_HEAD = LAMP_BASE - 1.64;
+function makeLampGlow(_, u, dpr) {
+  const cv = mkc(u * LAMP_GLOW_W, u * LAMP_GLOW_H, dpr), g = cv.getContext('2d'), cx = u * LAMP_GLOW_W / 2;
+  const pr = u * 1.3, pool = g.createRadialGradient(0, 0, 0, 0, 0, pr);
+  pool.addColorStop(0, 'rgba(255,214,140,.3)'); pool.addColorStop(.6, 'rgba(255,196,110,.12)'); pool.addColorStop(1, 'rgba(255,180,90,0)');
+  g.save(); g.translate(cx, u * LAMP_BASE); g.scale(1, .38); g.fillStyle = pool; g.fillRect(-pr, -pr, pr * 2, pr * 2); g.restore();
+  // A small warm core makes the fixture visibly switched on while the
+  // surrounding halo remains restrained enough for a dense city block.
+  const hy = u * LAMP_HEAD, hr = u * .85, halo = g.createRadialGradient(cx, hy, 0, cx, hy, hr);
+  halo.addColorStop(0, 'rgba(255,224,150,.42)'); halo.addColorStop(.4, 'rgba(255,200,110,.16)'); halo.addColorStop(1, 'rgba(255,180,90,0)');
+  g.fillStyle = halo; g.fillRect(cx - hr, hy - hr, hr * 2, hr * 2);
+  g.fillStyle = 'rgba(255,240,190,.75)'; g.beginPath(); g.arc(cx, hy, u * .12, 0, Math.PI * 2); g.fill();
+  return cv;
+}
+
+const drawn = [];
 export function describeMap(v, now, st) {
   const map = st.map, U = v.U;
   cur.map = map; cur.city = CITIES[map.ci]; cur.emblem = emblems[map.ci]; v.now = now;
+  const ambient = map.kind !== 'in' ? ambientOf(map) : null, night = ambient?.weather.phase === 'night';
+  // 夜裡記下每一張貼圖，最後才知道哪些擋在亮著的窗戶前面
+  const put = v.sprite;
+  drawn.length = 0;
+  if (night) v.sprite = (...a) => { drawn.push(a); put(...a) };
 
   // 水面閃光
   const x0 = Math.max(0, Math.floor(v.cam.x / U)), y0 = Math.max(0, Math.floor(v.cam.y / U));
@@ -242,11 +346,44 @@ export function describeMap(v, now, st) {
   drawActor(v, p.x, p.y, st.look, p.dir, p.step, depth);
   const gx = Math.round(p.x), gy = Math.round(p.y);
   if (!p.moving && map.g[gy]?.[gx] === GT.TG) grassFront(v, gx, gy, depth);
-  if (map.kind !== 'in') {
-    const weather = weatherAt(new Date(), map.ci);
+  v.sprite = put;
+  if (ambient) {
+    const { weather } = ambient;
+    // 天黑或天亮了：這一格畫完再重畫地面（現在重畫會把清單裡的貼圖刪掉）
+    if (map.groundNight !== undefined && map.groundNight !== night && repaintGround) { map.groundNight = night; queueMicrotask(repaintGround) }
     const frame = Math.floor(now / 180) % 8;
     const w = Math.max(1, Math.round(v.cam.w)), h = Math.max(1, Math.round(v.cam.h));
-    const key = `weather-${weather.kind}-${weather.phase}-${frame}-${w}x${h}`;
+    const weatherFrame = weather.kind === 'rain' || weather.kind === 'storm' ? frame : 0;
+    const key = `weather-${weather.kind}-${weather.phase}-${weatherFrame}-${w}x${h}`;
     v.sprite(key, makeWeatherOverlay, { w, h, weather, frame }, v.cam.x, v.cam.y, w, h, 1e9, 1, FX_NONE);
+    v.sprite(`night-${weather.phase}-${w}x${h}`, makeNightOverlay, { w, h, weather }, v.cam.x, v.cam.y, w, h, 1e9 + 1, 1, FX_NONE);
+    if (night) nightLights(v, map, weather);
   }
+}
+
+// 天黑以後：每棟建築的窗戶亮燈、路燈打開，都蓋在夜色上面
+const lit = [];
+function nightLights(v, map, weather) {
+  const U = v.U, cx0 = v.cam.x, cy0 = v.cam.y, cx1 = cx0 + v.cam.w, cy1 = cy0 + v.cam.h;
+  lit.length = 0;
+  for (const o of map.objs) {
+    if (o.type !== 'bld') continue;
+    const b = BLD[o.kind], by = (o.y + b.h) * U, x = o.x * U, y = by - (b.h + b.ex) * U, w = b.w * U, h = (b.h + b.ex) * U;
+    if (x > cx1 || x + w < cx0 || y > cy1 || y + h < cy0) continue;
+    lit.push(x, y, w, h, by);
+    v.sprite(keyOf(o, o => `bld-${o.kind}-${o.brand || 'local'}`) + '-lit', makeBldLight, o, x, y, w, h, 1e9 + 2, 1, FX_NONE);
+  }
+  // 站在亮窗前面的人、樹、路燈：蓋上同樣的夜色重畫一次，窗戶的光才不會透過去
+  let wash = null;
+  for (const [key, make, arg, x, y, w, h, depth, alpha] of drawn) {
+    if (depth >= 1e9) continue;
+    for (let i = 0; i < lit.length; i += 5) {
+      if (depth <= lit[i + 4] || x >= lit[i] + lit[i + 2] || x + w <= lit[i] || y >= lit[i + 1] + lit[i + 3] || y + h <= lit[i + 1]) continue;
+      v.sprite(`${key}~night-${weather.kind}`, nightTinted(make), { arg, wash: wash || (wash = nightWash(weather)) }, x, y, w, h, 1e9 + 3, alpha, FX_NONE);
+      break;
+    }
+  }
+  // 路燈天黑就亮（燈下的路和人會被照亮）
+  const lamps = map.nightLamps || (map.nightLamps = map.objs.filter(o => o.type === 'lamp'));
+  for (const lamp of lamps) v.sprite('lamp-glow', makeLampGlow, null, (lamp.x + .5 - LAMP_GLOW_W / 2) * U, (lamp.y + 1 - LAMP_BASE) * U, LAMP_GLOW_W * U, LAMP_GLOW_H * U, 1e9 + 4, 1, FX_NONE);
 }

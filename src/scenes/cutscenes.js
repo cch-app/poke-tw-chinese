@@ -4,6 +4,8 @@ import { $, esc } from '../core/util.js';
 import { CITIES, TW_PEAKS, TW_PTS, TW_RANGES } from '../data/index.js';
 import { LI, T, Z, rb } from '../i18n.js';
 import { playerLook } from '../world/looks.js';
+import { weatherAt } from '../world/weather.js';
+import { drawMoon } from '../world/moon.js';
 import { renderPixel } from '../render/pixel.js';
 
 // 客機（俯視）：後掠翼、翼下發動機、平尾與紅色垂直尾翼，機身用漸層做出圓柱立體感；陰影依高度偏移落在海面上
@@ -61,22 +63,122 @@ function cloudsAerial(g,w,h,cl,t,near){const m=Math.min(w,h);cl.forEach(c=>{cons
 function cirrus(g,w,h,t){g.save();g.globalAlpha=.22;[[.15,.12,.5],[.55,.3,.4],[.25,.7,.45],[.7,.85,.35]].forEach(([fx,fy,len])=>{const x=((fx+t*.01)%1.2-.1)*w,y=fy*h;
  for(let k=0;k<5;k++){const gr=g.createLinearGradient(x-len*w/2,0,x+len*w/2,0);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.5,'rgba(255,255,255,.8)');gr.addColorStop(1,'rgba(255,255,255,0)');
   g.strokeStyle=gr;g.lineWidth=Math.max(1,h*.004);g.beginPath();g.moveTo(x-len*w/2,y+k*h*.008);g.quadraticCurveTo(x,y+k*h*.008-h*.02,x+len*w/2,y+k*h*.008+h*.01);g.stroke()}});g.restore()}
-function mapScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,w,h,['#1f6fbf','#4aa8ea']);g.fillRect(0,0,w,h);
+function cutsceneSky(g, w, h, weather) {
+  const stops = weather.phase === 'night'
+    ? ['#07142f', '#1c315d']
+    : weather.phase === 'dusk'
+      ? ['#211f4d', '#9a5264']
+      : weather.phase === 'sunset'
+        ? ['#5b3155', '#ef8d63']
+        : weather.phase === 'dawn'
+          ? ['#40568e', '#f0ad7f']
+          : weather.kind === 'storm'
+            ? ['#405878', '#91a6bd']
+            : ['#6fb8ff', '#d8f0ff'];
+  g.fillStyle = lg(g, 0, 0, 0, h, stops); g.fillRect(0, 0, w, h);
+}
+
+function cutsceneCelestial(g, w, h, weather, date, t = 0) {
+  const phase = weather.phase;
+  if (phase === 'night' || phase === 'dusk' || phase === 'dawn') {
+    if (phase === 'night') {
+      g.fillStyle = 'rgba(239,246,255,.78)';
+      for (let i = 0; i < Math.ceil(w / 80); i++) {
+        const x = (i * 83 + Math.floor(t / 120) * 2) % Math.max(1, w);
+        const y = (i * 47 + 17) % Math.max(1, h * .55);
+        g.fillRect(x, y, Math.max(1, w * .0025), Math.max(1, w * .0025));
+      }
+    }
+    const mx = w * .82, my = phase === 'dawn' ? h * .22 : h * .16, mr = Math.min(w, h) * .055;
+    drawMoon(g, mx, my, mr, date, phase === 'night' ? .94 : .54);
+    return;
+  }
+  const sy = phase === 'sunset' ? h * .54 : h * .17;
+  const sun = phase === 'sunset' ? '#ffbd72' : phase === 'scorching' ? '#fff1a1' : '#fff3b0';
+  g.fillStyle = sun; g.beginPath(); g.arc(w * .84, sy, Math.min(w, h) * .06, 0, Math.PI * 2); g.fill();
+}
+
+// 夜色和黃昏蓋滿整個畫面（天空、山、雲、建築都一樣暗），亮著的燈之後再畫上去
+const SHADE = { night: 'rgba(5,13,38,.38)', dusk: 'rgba(36,24,70,.18)' };
+function shadeCutscene(g, w, h, weather) {
+  if (SHADE[weather.phase]) { g.fillStyle = SHADE[weather.phase]; g.fillRect(0, 0, w, h) }
+}
+// 天空：壓暗以後才畫星星、月亮，景物都畫在它們前面
+function nightSky(g, w, h, weather, date, t) { cutsceneSky(g, w, h, weather); shadeCutscene(g, w, h, weather); cutsceneCelestial(g, w, h, weather, date, t) }
+// 景物先畫在另一張畫布上、只把畫到的地方壓暗再貼回來：星星月亮不會跑到建築和路面上，
+// 後面亮著的燈也不會透過飛機、路燈柱這些擋在前面的東西。
+// 用法：const out=g; g=shadeBegin(out,weather); …照常畫… g=shadeEnd(out,g,weather)
+let shadeCv = null;
+function shadeBegin(g, weather) {
+  if (!SHADE[weather.phase]) return g;
+  const cv = g.canvas, l = shadeCv || (shadeCv = document.createElement('canvas'));
+  if (l.width !== cv.width || l.height !== cv.height) { l.width = cv.width; l.height = cv.height }
+  const c = l.getContext('2d');
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, l.width, l.height);
+  c.setTransform(g.getTransform()); c.imageSmoothingEnabled = g.imageSmoothingEnabled; c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  return c;
+}
+function shadeEnd(g, c, weather) {
+  if (c === g) return g;
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = SHADE[weather.phase]; c.fillRect(0, 0, c.canvas.width, c.canvas.height); c.restore();
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.drawImage(c.canvas, 0, 0); g.restore();
+  return g;
+}
+
+/* ---------- 夜裡的燈：先壓暗整個畫面，再把亮著的窗戶、路燈畫在上面 ---------- */
+function glowAt(g, x, y, r, rgb = '255,214,140', a = .55) {
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(.4, `rgba(${rgb},${a * .35})`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+}
+// drawEuroLamp 的燈頭亮起來：燈罩換成亮黃色，外面一圈光，地上一片光暈
+function lampsLit(g, xs, gy, H) {
+  const pw = H * .05;
+  xs.forEach(x => {
+    g.save(); g.translate(x, gy); g.scale(1, .3); glowAt(g, 0, 0, H * .45, '255,200,120', .4); g.restore();
+    glowAt(g, x, gy - H * .88, H * .34);
+    g.beginPath(); g.moveTo(x - pw, gy - H * .79); g.lineTo(x - pw * 1.4, gy - H * .97); g.lineTo(x + pw * 1.4, gy - H * .97); g.lineTo(x + pw, gy - H * .79); g.closePath();
+    g.fillStyle = '#fff3c4'; g.fill();
+  });
+}
+// 降落燈：鼻輪上的燈往前打出一道光，離地面越近，跑道上照亮的那一塊越亮。x、y、s、pitch 和 planeSide 一樣
+function landingLight(g, x, y, s, pitch, ground) {
+  const lx = s * 1.05, ly = s * .16, L = s * 4.2, c = Math.cos(pitch), sn = Math.sin(pitch);
+  g.save(); g.translate(x, y); g.rotate(pitch);
+  const beam = g.createLinearGradient(lx, 0, lx + L, 0);
+  beam.addColorStop(0, 'rgba(255,248,214,.5)'); beam.addColorStop(1, 'rgba(255,248,214,0)');
+  g.fillStyle = beam; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx + L, ly - s * .3); g.lineTo(lx + L, ly + s * 1.2); g.closePath(); g.fill();
+  glowAt(g, lx, ly, s * .3, '255,252,232', .95);
+  g.restore();
+  const wx = x + lx * c - ly * sn, wy = y + lx * sn + ly * c, k = Math.max(0, 1 - (ground - wy) / (s * 3));
+  if (k > 0) { g.save(); g.translate(wx + s * 1.4 + (ground - wy) * 1.5, ground); g.scale(1, .22); glowAt(g, 0, 0, s * 1.5, '255,246,206', .6 * k); g.restore() }
+}
+// 亮著的窗戶：[x, y, w, h, ...]
+function windowsLit(g, wins) {
+  g.fillStyle = 'rgba(255,208,122,.88)';
+  for (let i = 0; i < wins.length; i += 4) g.fillRect(wins[i], wins[i + 1], wins[i + 2], wins[i + 3]);
+}
+
+function mapScene(g,w,h,p,cl,t,weather,date){cutsceneSky(g,w,h,weather);
  g.strokeStyle='rgba(255,255,255,.12)';g.lineWidth=2;for(let y=h*.1;y<h;y+=h*.08){g.beginPath();for(let x=0;x<=w;x+=20)g.lineTo(x,y+Math.sin(x*.02+t/600+y)*4);g.stroke()}
  g.beginPath();g.moveTo(0,h*.05);g.quadraticCurveTo(w*.12,h*.12,w*.1,h*.32);g.quadraticCurveTo(w*.16,h*.45,0,h*.55);g.closePath();fs(g,'#7fbf6a',2);
  const bw=TW_BOX[2]-TW_BOX[0],bh=TW_BOX[3]-TW_BOX[1],k=Math.min(h*.74/bh,w*.4/bw),ox=w*.55-(TW_BOX[0]+bw/2)*k,oy=h*.5-(TW_BOX[1]+bh/2)*k;
  g.beginPath();TW_PTS.split(' ').forEach((pt,i)=>{const[a,b]=pt.split(',').map(Number);i?g.lineTo(ox+a*k,oy+b*k):g.moveTo(ox+a*k,oy+b*k)});g.closePath();fs(g,'#8bd36b',2.5);
  g.lineCap='round';g.lineJoin='round';const line=pts=>{g.beginPath();pts.split(' ').forEach((pt,i)=>{const[a,b]=pt.split(',').map(Number);i?g.lineTo(ox+a*k,oy+b*k):g.moveTo(ox+a*k,oy+b*k)})};
  Object.entries(TW_RANGES).forEach(([id,pts])=>{const big=id==='central';line(pts);g.strokeStyle='rgba(60,130,60,.55)';g.lineWidth=k*(big?7:4.5);g.stroke();line(pts);g.strokeStyle='rgba(122,106,62,.75)';g.lineWidth=k*(big?2:1.4);g.stroke()});
- TW_PEAKS.forEach(([id,a,b])=>{const px=ox+a*k,py=oy+b*k,r=k*(id==='yushan'?3.4:2.6);g.beginPath();g.moveTo(px-r,py+r*.7);g.lineTo(px,py-r*.9);g.lineTo(px+r,py+r*.7);g.closePath();fs(g,id==='yushan'?'#f4f1e8':'#8a7a4e',1.5)});
- const tx=ox+CITIES[0].x*k,ty=oy+CITIES[0].y*k,pr=(t/500)%1;circ(g,tx,ty,6+pr*20);g.strokeStyle=`rgba(255,91,74,${1-pr})`;g.lineWidth=3;g.stroke();circ(g,tx,ty,6);fs(g,'#ff5b4a',2);
- {const fz=Math.max(16,Math.min(26,w*.04));canvasRuby(g,'桃園',tx-fz*1.6,ty+fz*1.9,fz,'#ffffff','#1b2340')}
+  TW_PEAKS.forEach(([id,a,b])=>{const px=ox+a*k,py=oy+b*k,r=k*(id==='yushan'?3.4:2.6);g.beginPath();g.moveTo(px-r,py+r*.7);g.lineTo(px,py-r*.9);g.lineTo(px+r,py+r*.7);g.closePath();fs(g,id==='yushan'?'#f4f1e8':'#8a7a4e',1.5)});
+ const tx=ox+CITIES[0].x*k,ty=oy+CITIES[0].y*k;
  cirrus(g,w,h,t/1000);cloudsAerial(g,w,h,cl.slice(0,7),t/1000,false);
  const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2,P=t2=>{const a=[-w*.08,h*.82],c=[w*.35,h*.02],b=[tx,ty];const u=1-t2;return[u*u*a[0]+2*u*t2*c[0]+t2*t2*b[0],u*u*a[1]+2*u*t2*c[1]+t2*t2*b[1]]};
  g.setLineDash([8,8]);g.strokeStyle='rgba(255,255,255,.8)';g.lineWidth=3;g.beginPath();for(let q=0;q<=e;q+=.01){const[x,y]=P(q);q?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();g.setLineDash([]);
  const[x,y]=P(e),[x2,y2]=P(Math.min(1,e+.01));planeTop(g,x,y,Math.min(w,h)*.06*(1-.35*e),Math.atan2(y2-y,x2-x)||0);
  // 一開始飛機剛穿出雲層：近處的大片雲從鏡頭前散開，越接近臺灣越淡
- if(p<.4){g.save();g.globalAlpha=1-p/.4;cloudsAerial(g,w,h,cl.slice(7),.4+p*2,true);g.restore()}}
+ if(p<.4){g.save();g.globalAlpha=1-p/.4;cloudsAerial(g,w,h,cl.slice(7),.4+p*2,true);g.restore()}
+ shadeCutscene(g,w,h,weather);  // 從上面往下看是海，沒有星星月亮
+ // 夜裡從空中看下去，每座城市都是一團燈火
+ if(weather.phase==='night')CITIES.forEach(c=>glowAt(g,ox+c.x*k,oy+c.y*k,Math.max(8,k*6),'255,206,120',.7));
+ const pr=(t/500)%1;circ(g,tx,ty,6+pr*20);g.strokeStyle=`rgba(255,91,74,${1-pr})`;g.lineWidth=3;g.stroke();circ(g,tx,ty,6);fs(g,'#ff5b4a',2);
+ {const fz=Math.max(16,Math.min(26,w*.04));canvasRuby(g,'桃園',tx-fz*1.6,ty+fz*1.9,fz,'#ffffff','#1b2340')}}
 // 降落：沿下滑道直線進場（機頭微仰、起落架與襟翼放下、落地燈亮），接近地面時拉平（flare）減緩下沉，
 // 主輪先著地冒出輪胎煙、擾流板升起，接著機頭放下讓鼻輪著地，最後減速滑行停下
 function airportMountains(g,w,h,t){
@@ -86,8 +188,8 @@ function airportMountains(g,w,h,t){
     g.lineTo(w,h);g.closePath();g.fill();g.restore()});
   g.strokeStyle='rgba(235,247,242,.32)';g.lineWidth=Math.max(1,h*.006);g.beginPath();for(let x=0;x<=w;x+=w/18)g.lineTo(x,h*(.57-Math.abs(Math.sin(x*.003+t*.00006))*.045));g.stroke();
 }
-function landScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,0,h,['#7cc6ff','#cfeeff','#ffe9c7']);g.fillRect(0,0,w,h);
- circ(g,w*.82,h*.2,Math.min(w,h)*.07);g.fillStyle='#fff3b0';g.fill();cloudsDraw(g,w,h,cl,t/1000,.45);
+function landScene(g,w,h,p,cl,t,weather,date){nightSky(g,w,h,weather,date,t);const out=g,night=weather.phase==='night';g=shadeBegin(out,weather);
+ cloudsDraw(g,w,h,cl,t/1000,.45);
  airportMountains(g,w,h,t);
  const gy=h*.72,ry=h*.82;g.fillStyle='#8bd36b';g.fillRect(0,gy,w,h-gy);
  // 現代航廈：整面玻璃帷幕加波浪形白色屋頂，旁邊是細長的錐形塔台
@@ -116,6 +218,22 @@ function landScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,0,h,['#7cc6ff','#cfeeff','
  for(let k=0;k<4;k++){circ(g,thr-w*.004,rt+h*.012+k*h*.016,2.5);g.fillStyle='#3ad17a';g.fill()}
  const nA=8,rab=Math.floor(t/70)%nA;for(let k=0;k<nA;k++){const x=thr-w*.02-(nA-1-k)*w*.013;g.fillStyle='#6b7280';g.fillRect(x-1,ry-h*.005,2,h*.02);circ(g,x,ry-h*.007,k===rab?4.5:2.5);g.fillStyle=k===rab?'#ffffff':'#fff1b8';g.fill()}
  [0,1,2,3].forEach(k=>{const x=w*.27+k*w*.012;rr(g,x,rb+h*.012,w*.009,h*.012,2);fs(g,'#2b2e35',1);circ(g,x+w*.0045,rb+h*.018,2.5);g.fillStyle=k<2?'#ff4a3a':'#ffffff';g.fill()});
+ g=shadeEnd(out,g,weather);
+ if(night){
+  // 航廈整面玻璃透出燈光，招牌照樣看得清楚；塔台的管制室、頂上的紅色航空障礙燈也亮著
+  g.fillStyle=lg(g,0,gy-bh,0,gy,['rgba(255,226,160,.62)','rgba(255,196,110,.7)']);g.fillRect(bx+2,gy-bh+2,bw-4,bh-10);
+  g.strokeStyle='rgba(120,90,60,.5)';g.lineWidth=2;for(let x=bx+bw/14;x<bx+bw;x+=bw/14){g.beginPath();g.moveTo(x,gy-bh);g.lineTo(x,gy-6);g.stroke()}
+  canvasRuby(g,'桃園機場',bx+bw/2,gy-bh*.6,Math.max(14,Math.min(26,bw*.07)),'#1b2340','#ffffff');
+  glowAt(g,bx+bw/2,gy-bh*.5,bw*.6,'255,206,120',.22);
+  g=shadeBegin(out,weather);[bx-w*.02,bx+bw*.3,bx+bw*.65,bx+bw+w*.02].forEach(x=>drawEuroLamp(g,x,gy+h*.02,h*.12));g=shadeEnd(out,g,weather);  // 燈柱在航廈前面
+  glowAt(g,tw,gy-th-bh*.16,bh*.6,'200,235,255',.5);glowAt(g,tw,gy-th-bh*.72,bh*.3,'255,74,58',.7);
+  lampsLit(g,[bx-w*.02,bx+bw*.3,bx+bw*.65,bx+bw+w*.02],gy+h*.02,h*.12);
+  // 跑道邊燈、進場燈、跑道頭的綠燈
+  for(let x=thr+20;x<w;x+=40)[rt,rb].forEach(yy=>glowAt(g,x,yy,9,'255,244,200',.7));
+  for(let k=0;k<4;k++)glowAt(g,thr-w*.004,rt+h*.012+k*h*.016,9,'90,240,140',.7);
+  const nA=8,rab=Math.floor(t/70)%nA;for(let k=0;k<nA;k++)glowAt(g,thr-w*.02-(nA-1-k)*w*.013,ry-h*.007,k===rab?18:9,'255,244,200',.7)}
+ // 飛機、輪胎煙、走下飛機的玩家在跑道燈前面：另外畫、另外壓暗，後面的燈才不會透過來
+ g=shadeBegin(out,weather);
  const s=Math.min(w*.14,h*.1),A=.5,x0=-w*.3,TX=w*.32,H=h*.32,f=.85,af=H*.0811,ground=ry+h*.01;
  let cx,alt=0,pitch;
  if(p<A){const u=p/A;cx=x0+(TX-x0)*u;
@@ -124,9 +242,11 @@ function landScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,0,h,['#7cc6ff','#cfeeff','
  const cy=ground-alt;
  if(alt>0){const a=alt/H;ell(g,cx-s*.1,ground,s*1.5*(1-a*.3),s*.08,0);g.fillStyle=`rgba(30,40,30,${.28*(1-a)})`;g.fill()}
  const c=Math.cos(pitch),sn=Math.sin(pitch),gx=PLANE_GEAR[0]*s,gyo=PLANE_GEAR[1]*s;
- planeSide(g,cx-(gx*c-gyo*sn),cy-(gx*sn+gyo*c),s,pitch,true,p>A&&p<.88);
+ const lx=cx-(gx*c-gyo*sn),ly=cy-(gx*sn+gyo*c);planeSide(g,lx,ly,s,pitch,true,p>A&&p<.88);
  if(p>=A&&p<A+.16){const k=(p-A)/.16;[0,1,2,3].forEach(i=>{g.fillStyle=`rgba(240,240,240,${(1-k)*.85})`;ell(g,cx-s*(.15+k*(.5+i*.4)),ground-s*(.08+k*.14),s*(.18+k*.35)*(1+i*.25),s*(.1+k*.14),0);g.fill()})}
- if(p>.9){const q=(p-.9)/.1;const px=cx+s*1.95+q*s*1.6;drawChar(g,px,ry+s*.05,s*.75,playerLook(),'right',Math.floor(t/150)%2?1:-1)}}
+ if(p>.9){const q=(p-.9)/.1;const px=cx+s*1.95+q*s*1.6;drawChar(g,px,ry+s*.05,s*.75,playerLook(),'right',Math.floor(t/150)%2?1:-1)}
+ g=shadeEnd(out,g,weather);
+ if(night)landingLight(g,lx,ly,s,pitch,ground)}
 export function flight(done){const ov=document.createElement('div');ov.className='fly';
  ov.innerHTML=`<canvas></canvas><div class="card flycap" id="flyCap"></div><button class="hbtn" id="flySkip">${Z('skip')} <span class="tl" style="display:inline">${T('skip')}</span></button>`;document.body.appendChild(ov);
  const c=ov.querySelector('canvas'),t0=performance.now(),DUR=10800,M=3800;let end=false,cs=-1;
@@ -134,8 +254,9 @@ export function flight(done){const ov=document.createElement('div');ov.className
  const finish=()=>{if(end)return;end=true;ov.style.opacity=0;setTimeout(()=>{ov.remove();done()},450)};
  ov.querySelector('#flySkip').onclick=finish;ov.querySelector('#flySkip').focus();
  const caps=[['從國外飛往臺灣……',"Flying to Taiwan from abroad…","海外から台湾へ向かっています……"],['歡迎來到桃園國際機場！',"Welcome to Taoyuan International Airport!","桃園国際空港へようこそ！"]];
+ const sceneDate=new Date(),sceneWeather=weatherAt(sceneDate,0);
  const frame=now=>{if(end)return;const t=Math.max(0,now-t0),w=c.clientWidth,h=c.clientHeight,d=Math.min(2,window.devicePixelRatio||1);
-  renderPixel(c,w,h,d,4,g=>{if(t<M)mapScene(g,w,h,t/M,cl,t);else landScene(g,w,h,Math.min(1,(t-M)/(DUR-M-600)),cl,t)});
+ renderPixel(c,w,h,d,4,g=>{if(t<M)mapScene(g,w,h,t/M,cl,t,sceneWeather,sceneDate);else landScene(g,w,h,Math.min(1,(t-M)/(DUR-M-600)),cl,t,sceneWeather,sceneDate)});
   const st=t<M?0:1;if(st!==cs){cs=st;$('#flyCap').innerHTML=`${rb(caps[st][0])}<span class="tl">${esc(caps[st][LI()])}</span>`}
   if(t>=DUR)return finish();requestAnimationFrame(frame)};requestAnimationFrame(frame)}
 // 跑車版小黃（側視）：參考後置引擎雙門跑車的比例——車長約為車高 3.7 倍、前後懸短、輪子靠近四角並填滿輪拱，
@@ -189,14 +310,16 @@ function taxiDraw(g,x,y,s,t){const lw=Math.max(1.5,s*.01),bob=Math.sin(t/90)*s*.
 const bgRand=(i,k)=>{const v=Math.sin(i*12.9898+k*78.233)*43758.5453;return v-Math.floor(v)};
 // 相鄰兩棟不會是同一種類型
 const bgTypes=new Map(),bgType=i=>{if(i<=-2)return 0;if(!bgTypes.has(i))bgTypes.set(i,(bgType(i-1)+1+Math.floor(bgRand(i,1)*4))%5);return bgTypes.get(i)};
-function bgBuilding(g,x,gy,BW,h,i){const R=k=>bgRand(i,k),type=bgType(i),bw=BW*(.74+R(2)*.2),fh=h*.042,lw=1.5,d=bw*.09;
+// 夜裡收集亮著的窗戶（約七成），壓暗畫面以後再畫上去
+let litWins=null;
+function bgBuilding(g,x,gy,BW,h,i){const R=k=>bgRand(i,k),type=bgType(i),bw=BW*(.74+R(2)*.2),fh=h*.042,lw=1.5,d=bw*.09;let wn=0;
  const H={0:4+Math.floor(R(3)*3),1:9+Math.floor(R(3)*4),2:3+Math.floor(R(3)*2),3:3+Math.floor(R(3)*2),4:7+Math.floor(R(3)*4)}[type],bh=H*fh+h*.02,top=gy-bh;
  const wall=[['#e8e1d3','#cfc6b4'],['#9cc3e0','#4f7aa3'],['#f2d7b8','#d8b48c'],['#b8664a','#8e4a33'],['#eef0f2','#c9ced6']][type];
  const pal=type===0?[['#e8e1d3','#cfc6b4'],['#d5dde3','#b3bec8'],['#ece0c8','#d2c09e']][Math.floor(R(4)*3)]:type===2?[['#f2d7b8','#d8b48c'],['#f6e3e0','#d9b8b2'],['#e3ecd8','#bfcfae']][Math.floor(R(4)*3)]:wall;
  g.beginPath();g.moveTo(x+bw,gy);g.lineTo(x+bw+d,gy-d*.6);g.lineTo(x+bw+d,top-d*.6);g.lineTo(x+bw,top);g.closePath();fs(g,pal[1],lw);
  g.beginPath();g.moveTo(x,top);g.lineTo(x+d,top-d*.6);g.lineTo(x+bw+d,top-d*.6);g.lineTo(x+bw,top);g.closePath();fs(g,type===1?'#c9dff0':'#9aa4b0',lw);
  g.fillStyle=lg(g,x,0,x+bw,0,[pal[0],pal[1]]);g.fillRect(x,top,bw,bh);g.strokeStyle=OUT;g.lineWidth=lw;g.strokeRect(x,top,bw,bh);
- const glassW=(wx,wy,ww,wh)=>{g.fillStyle=lg(g,0,wy,0,wy+wh,['#cfe6f5','#6f9cc4']);g.fillRect(wx,wy,ww,wh);g.fillStyle='rgba(255,255,255,.4)';g.fillRect(wx+ww*.15,wy+wh*.1,ww*.12,wh*.6)};
+ const glassW=(wx,wy,ww,wh)=>{if(litWins&&bgRand(i*13+wn++,7)>.3)litWins.push(wx,wy,ww,wh);g.fillStyle=lg(g,0,wy,0,wy+wh,['#cfe6f5','#6f9cc4']);g.fillRect(wx,wy,ww,wh);g.fillStyle='rgba(255,255,255,.4)';g.fillRect(wx+ww*.15,wy+wh*.1,ww*.12,wh*.6)};
  if(type===0){for(let f=1;f<H;f++){const y=gy-(f+1)*fh;for(let c=0;c<3;c++){const wx=x+bw*(.08+c*.31),ww=bw*.24,wh=fh*.6;glassW(wx,y+fh*.2,ww,wh);
     g.strokeStyle='#4d5560';g.lineWidth=1;g.strokeRect(wx-1,y+fh*.15,ww+2,wh+fh*.1);for(let k=1;k<4;k++){g.beginPath();g.moveTo(wx+ww*k/4,y+fh*.15);g.lineTo(wx+ww*k/4,y+fh*.85);g.stroke()}
     if(bgRand(i*7+f,c)>.55){g.fillStyle='#f4f4f2';g.fillRect(wx+ww*.15,y+fh*.82,ww*.7,fh*.22);g.fillStyle='#9aa4b0';g.fillRect(wx+ww*.2,y+fh*.87,ww*.6,fh*.04)}}}
@@ -204,6 +327,7 @@ function bgBuilding(g,x,gy,BW,h,i){const R=k=>bgRand(i,k),type=bgType(i),bw=BW*(
   const tx=x+bw*(.55+R(5)*.15),tw=bw*.22;[tx+tw*.15,tx+tw*.85].forEach(lx=>{g.fillStyle='#4d5560';g.fillRect(lx-1,top-fh*.35,2,fh*.35)});rr(g,tx,top-fh*1.15,tw,fh*.85,tw*.3);fs(g,lg(g,tx,0,tx+tw,0,['#f4f6f8','#aeb6c0']),lw);
   if(R(6)>.5){g.fillStyle='#4f7fb5';g.beginPath();g.moveTo(x+bw*.05,top);g.lineTo(x+bw*.08,top-fh*.7);g.lineTo(x+bw*.45,top-fh*.7);g.lineTo(x+bw*.48,top);g.fill();g.strokeStyle=OUT;g.stroke()}}
  if(type===1){g.fillStyle=lg(g,x,top,x+bw,gy,['#d6ebf8','#7fa9cf','#3f668e']);g.fillRect(x+lw,top+lw,bw-2*lw,bh-2*lw);
+  if(litWins)for(let y=top+fh;y<gy;y+=fh)for(let c=0;c<5;c++)if(bgRand(i*13+wn++,7)>.35)litWins.push(x+bw*c/5+2,y-fh+2,bw/5-4,fh-4);
   g.strokeStyle='rgba(235,242,250,.7)';g.lineWidth=1;for(let y=top+fh;y<gy;y+=fh){g.beginPath();g.moveTo(x,y);g.lineTo(x+bw,y);g.stroke()}for(let c=1;c<5;c++){g.beginPath();g.moveTo(x+bw*c/5,top);g.lineTo(x+bw*c/5,gy);g.stroke()}
   g.fillStyle='rgba(255,255,255,.28)';g.beginPath();g.moveTo(x+bw*.1,gy);g.lineTo(x+bw*.55,top);g.lineTo(x+bw*.75,top);g.lineTo(x+bw*.3,gy);g.fill();
   rr(g,x+bw*.3,top-fh*.9,bw*.4,fh*.9,2);fs(g,'#5f7f9e',lw);g.fillStyle='#ff4a3a';circ(g,x+bw*.5,top-fh*1.3,2.5);g.fill();g.strokeStyle=OUT;g.beginPath();g.moveTo(x+bw*.5,top-fh*.9);g.lineTo(x+bw*.5,top-fh*1.25);g.stroke()}
@@ -223,33 +347,39 @@ function bgBuilding(g,x,gy,BW,h,i){const R=k=>bgRand(i,k),type=bgType(i),bw=BW*(
    if(f>0&&bgRand(i+f,4)>.6){circ(g,x+bw*(.15+bgRand(i,f)*.7),y+fh*.62,fh*.14);g.fillStyle='#4fae54';g.fill()}}
   g.fillStyle='#c9ced6';g.fillRect(x+bw*.1,top-fh*.5,bw*.8,fh*.5);g.strokeStyle=OUT;g.strokeRect(x+bw*.1,top-fh*.5,bw*.8,fh*.5)}
 }
-function taxiScene(g,w,h,p,t,city){g.fillStyle=lg(g,0,0,0,h,['#86c8ff','#dff3ff']);g.fillRect(0,0,w,h);circ(g,w*.85,h*.16,Math.min(w,h)*.06);g.fillStyle='#fff3b0';g.fill();
+function taxiScene(g,w,h,p,t,city,weather,date){nightSky(g,w,h,weather,date,t);const night=weather.phase==='night',out=g;g=shadeBegin(out,weather);litWins=night?[]:null;
  const gy=h*.66;g.fillStyle='#a9d9a0';g.beginPath();g.moveTo(0,gy);for(let x=0;x<=w+40;x+=40){const X=x-((t*.03)%40);g.lineTo(X,gy-h*.18-Math.abs(Math.sin((X+t*.03)*.004))*h*.12)}g.lineTo(w,gy);g.fill();
  // 遠景：淡藍色的城市天際線，捲動得比較慢（視差）
  {const DW=Math.max(40,w*.07),o=t*.06,j0=Math.floor(o/DW)-1;g.fillStyle='#c4d3e2';
   for(let j=j0;j<j0+Math.ceil(w/DW)+2;j++){const x=j*DW-o,v=bgRand(j,9),bh=h*(.16+v*.22);g.fillRect(x,gy-bh,DW*.86,bh);
-   g.fillStyle='#d7e2ec';for(let y=gy-bh+h*.02;y<gy-h*.02;y+=h*.035)g.fillRect(x+DW*.15,y,DW*.56,h*.008);g.fillStyle='#c4d3e2';
+   for(let y=gy-bh+h*.02,n=0;y<gy-h*.02;y+=h*.035,n++){g.fillStyle=night&&bgRand(j*17+n,5)>.45?'#ffd98a':'#d7e2ec';g.fillRect(x+DW*.15,y,DW*.56,h*.008)}g.fillStyle='#c4d3e2';
    if(v>.75){g.fillRect(x+DW*.38,gy-bh-h*.05,DW*.1,h*.05)}}}
  // 近景：各式各樣的臺灣街屋
  const BW=Math.max(80,w*.13),off=t*.18,i0=Math.floor(off/BW)-1;
  for(let i=i0;i<i0+Math.ceil(w/BW)+3;i++)bgBuilding(g,i*BW-off,gy,BW,h,i);
  g.fillStyle='#d6d0c4';g.fillRect(0,gy,w,h*.04);g.fillStyle='#5b6178';g.fillRect(0,gy+h*.04,w,h*.2);g.fillStyle='#8bd36b';g.fillRect(0,gy+h*.24,w,h);
  g.fillStyle='#fff';const o2=(t*.5)%80;for(let x=-o2;x<w;x+=80)g.fillRect(x,gy+h*.135,40,h*.008);
- const o3=(t*.5)%260;for(let x=-o3;x<w+260;x+=260)drawEuroLamp(g,x,gy,h*.18);
- if(p>.3&&p<.85){const q=(p-.3)/.55,sx=w*1.05-q*(w*1.5),sw=Math.min(w*.4,260),sh=sw*.42;g.fillStyle='#3d4766';g.fillRect(sx+sw*.15,gy-h*.05-sh-h*.05,5,sh+h*.1);g.fillRect(sx+sw*.8,gy-h*.05-sh-h*.05,5,sh+h*.1);
+ const o3=(t*.5)%260,lx=[];for(let x=-o3;x<w+260;x+=260)lx.push(x);
+ const lamps=()=>lx.forEach(x=>drawEuroLamp(g,x,gy,h*.18));lamps();
+ const sign=()=>{if(!(p>.3&&p<.85))return;const q=(p-.3)/.55,sx=w*1.05-q*(w*1.5),sw=Math.min(w*.4,260),sh=sw*.42;g.fillStyle='#3d4766';g.fillRect(sx+sw*.15,gy-h*.05-sh-h*.05,5,sh+h*.1);g.fillRect(sx+sw*.8,gy-h*.05-sh-h*.05,5,sh+h*.1);
   rr(g,sx,gy-h*.05-sh-h*.12,sw,sh,8);fs(g,'#1f8a4c',2.5);canvasRuby(g,city.zh,sx+sw*.42,gy-h*.17-sh*.25,Math.min(sh*.34,30),'#ffffff');
-  g.fillStyle='#fff';g.font=`900 ${sh*.3}px sans-serif`;g.textAlign='center';g.fillText('→',sx+sw*.85,gy-h*.17-sh*.25)}
+  g.fillStyle='#fff';g.font=`900 ${sh*.3}px sans-serif`;g.textAlign='center';g.fillText('→',sx+sw*.85,gy-h*.17-sh*.25);
+};sign();
+ g=shadeEnd(out,g,weather);
+ // 窗戶的燈蓋在夜色上面；擋在窗戶前面的路燈柱和路牌再畫一次（一樣壓暗）
+ if(night){windowsLit(g,litWins);g=shadeBegin(out,weather);lamps();sign();g=shadeEnd(out,g,weather);lampsLit(g,lx,gy,h*.18)}litWins=null;
  const s=Math.min(w*.42,h*.42);taxiDraw(g,w*.45,gy+h*.16,s,t)}
-function skyScene(g,w,h,p,t,cl){g.fillStyle=lg(g,0,0,0,h,['#6fb8ff','#d8f0ff']);g.fillRect(0,0,w,h);cloudsDraw(g,w,h,cl,t/600,1);
- g.fillStyle='#2f86d6';g.fillRect(0,h*.82,w,h*.18);const s=Math.min(w*.18,h*.12);planeSide(g,w*.45,h*.42+Math.sin(t/400)*h*.02,s,-.03,false)}
+function skyScene(g,w,h,p,t,cl,weather,date){nightSky(g,w,h,weather,date,t);const out=g;g=shadeBegin(out,weather);cloudsDraw(g,w,h,cl,t/600,1);
+ g.fillStyle=weather.phase==='night'?'#162d58':'#2f86d6';g.fillRect(0,h*.82,w,h*.18);const s=Math.min(w*.18,h*.12);planeSide(g,w*.45,h*.42+Math.sin(t/400)*h*.02,s,-.03,false);g=shadeEnd(out,g,weather)}
 export function travelAnim(ci,done){const city=CITIES[ci],island=!!city.island;const ov=document.createElement('div');ov.className='fly';
  ov.innerHTML=`<canvas></canvas><div class="card flycap" id="flyCap"></div><button class="hbtn" id="flySkip">${Z('skip')} <span class="tl" style="display:inline">${T('skip')}</span></button>`;document.body.appendChild(ov);
  const cap=island?[`先搭計程車，再坐${city.id==='penghu'?'船':'飛機'}前往${city.zh}……`,`Taxi, then ${city.id==='penghu'?'a ferry':'a flight'} to ${city.en}…`,`タクシーと${city.id==='penghu'?'フェリー':'飛行機'}で${city.ja}へ……`]:[`搭計程車前往${city.zh}……`,`Taking a taxi to ${city.en}…`,`タクシーで${city.ja}へ……`];
  $('#flyCap').innerHTML=`${rb(cap[0])}<span class="tl">${esc(cap[LI()])}</span>`;
  const c=ov.querySelector('canvas'),t0=performance.now(),DUR=6200;let end=false;const cl=Array.from({length:10},()=>({x:Math.random(),y:Math.random()*.7,s:.5+Math.random(),v:.03+Math.random()*.05}));
  const finish=()=>{if(end)return;end=true;ov.style.opacity=0;setTimeout(()=>{ov.remove();done()},450)};ov.querySelector('#flySkip').onclick=finish;ov.querySelector('#flySkip').focus();
+ const sceneDate=new Date(),sceneWeather=weatherAt(sceneDate,ci);
  const frame=now=>{if(end)return;const t=Math.max(0,now-t0),w=c.clientWidth,h=c.clientHeight,d=Math.min(2,window.devicePixelRatio||1);
   const p=Math.min(1,t/DUR);
-  renderPixel(c,w,h,d,4,g=>{if(island&&p>.5)skyScene(g,w,h,p,t,cl);else taxiScene(g,w,h,island?p*2*.7:p,t,city);
+  renderPixel(c,w,h,d,4,g=>{if(island&&p>.5)skyScene(g,w,h,p,t,cl,sceneWeather,sceneDate);else taxiScene(g,w,h,island?p*2*.7:p,t,city,sceneWeather,sceneDate);
    g.fillStyle='#ffffff';g.fillRect(w*.2,h-30,w*.6,12);g.fillStyle='#1b2340';g.fillRect(w*.2,h-30,w*.6*p,12)});
   if(t>=DUR)return finish();requestAnimationFrame(frame)};requestAnimationFrame(frame)}
