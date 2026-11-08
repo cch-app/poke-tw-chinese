@@ -16,8 +16,14 @@ const BG_TOWN = COLORS.green[1], BG_IN = COLORS.ink[0];
 function makeWeatherOverlay(arg, dpr){
   const {w,h,weather,frame}=arg;
   const cv=mkc(w,h,dpr),g=cv.getContext('2d');
-  const tint={night:'rgba(18,30,78,.34)',dawn:'rgba(255,174,104,.12)',sunset:'rgba(255,103,47,.2)',dusk:'rgba(72,56,112,.24)',scorching:'rgba(255,155,44,.12)'}[weather.phase];
+  const tint={night:'rgba(10,20,62,.62)',dawn:'rgba(255,174,104,.12)',sunset:'rgba(255,103,47,.2)',dusk:'rgba(72,56,112,.3)',scorching:'rgba(255,155,44,.12)'}[weather.phase];
   if(tint){g.fillStyle=tint;g.fillRect(0,0,w,h)}
+  if(weather.phase==='dawn'||weather.phase==='sunset'){
+    const warm=g.createLinearGradient(0,0,0,h);
+    warm.addColorStop(0,weather.phase==='dawn'?'rgba(255,201,112,.18)':'rgba(255,106,56,.25)');
+    warm.addColorStop(.55,'rgba(255,188,100,.06)');warm.addColorStop(1,'rgba(45,60,110,.12)');
+    g.fillStyle=warm;g.fillRect(0,0,w,h);
+  }
   if(weather.kind==='sunny'){
     const glow=g.createRadialGradient(w*.78,h*.12,0,w*.78,h*.12,Math.max(w,h)*.62);
     glow.addColorStop(0,'rgba(255,238,166,.22)');glow.addColorStop(1,'rgba(255,238,166,0)');g.fillStyle=glow;g.fillRect(0,0,w,h);
@@ -36,7 +42,13 @@ function makeWeatherOverlay(arg, dpr){
       g.beginPath();g.moveTo(x,y);g.lineTo(x-w*.018,y+h*.075);g.stroke();
     }
   }
-  if(weather.kind==='night'){
+  if(weather.phase==='night'){
+    // Crescent moon and sparse stars make nighttime legible even when the
+    // two-hour weather roll is cloudy. The cloud/rain overlay remains on top.
+    const mx=w*.82,my=h*.16,mr=Math.max(11,Math.min(w,h)*.045);
+    g.save();g.globalAlpha=(weather.kind==='cloudy'||weather.kind==='storm')?.58:.92;
+    g.fillStyle='#fff4c2';g.beginPath();g.arc(mx,my,mr,0,Math.PI*2);g.fill();
+    g.globalCompositeOperation='destination-out';g.beginPath();g.arc(mx+mr*.38,my-mr*.2,mr*.9,0,Math.PI*2);g.fill();g.restore();
     g.fillStyle='rgba(244,248,255,.7)';
     for(let i=0;i<Math.ceil(w/80);i++)g.fillRect((i*83+frame*2)%w,(i*47)%Math.max(1,h),Math.max(1,w*.002),Math.max(1,w*.002));
   }
@@ -77,6 +89,11 @@ const makeChair = px((_, u, dpr) => spriteChair(u, dpr));
 const makeGrass = px((_, u, dpr) => { const c = mkc(u, u, dpr); tallGrass(c.getContext('2d'), 0, 0, true); return c });
 const makeShimmer = (_, u, dpr) => { const c = mkc(u * .34, u * .08, dpr), g = c.getContext('2d');
   g.strokeStyle = COLORS.blue[3]; g.lineWidth = u * .04; g.lineCap = 'round'; g.beginPath(); g.moveTo(u * .02, u * .04); g.lineTo(u * .32, u * .04); g.stroke(); return c };
+const makeOceanWave = (arg, u, dpr) => { const c = mkc(u * .9, u * .58, dpr), g = c.getContext('2d');
+  const shift = arg.phase * u * .16; g.lineCap = 'round';
+  [[.16,.25,.2],[.48,.48,.28],[.76,.72,.17]].forEach(([x,y,len],i)=>{g.strokeStyle=i===1?'rgba(220,249,255,.66)':'rgba(164,225,246,.54)';g.lineWidth=Math.max(1,u*.035);g.beginPath();
+    g.moveTo(x*u+shift-len*u,y*u);g.quadraticCurveTo(x*u+shift,y*u-u*.07,x*u+shift+len*u,y*u);g.stroke()});
+  return c };
 const makeBubble = px((_, u, dpr) => { const c = mkc(u * .5, u * .54, dpr), g = c.getContext('2d'), m = u * .05;
   rr(g, m, m, u * .4, u * .44, u * .12); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OUT; g.stroke();
   g.fillStyle = '#ff5b4a'; g.font = `900 ${u * .36}px sans-serif`; g.textAlign = 'center'; g.fillText('!', m + u * .2, m + u * .34); return c });
@@ -102,6 +119,31 @@ const makeBridge = px((o, u, dpr) => { const w = o.w * u, h = o.h * u, pad = u *
   [pad - u * .02, pad + w - u * .1].forEach(x => { g.fillStyle = '#6b4226'; g.fillRect(x, pad - u * .12, u * .12, h + u * .24); g.strokeStyle = OUT; g.lineWidth = lw; g.strokeRect(x, pad - u * .12, u * .12, h + u * .24);
     for (let y = 0; y <= h; y += u * .5) { rr(g, x - u * .03, pad + y - u * .16, u * .18, u * .18, u * .04); g.fillStyle = '#4a2e1f'; g.fill() } });
   return c });
+// 海邊的東西：條紋海灘傘、停在碼頭邊的漁船、碼頭盡頭紅白相間的燈塔
+const HUES = [['#ff5b4a', '#fff6e0'], ['#3a8fd9', '#fff6e0'], ['#ffc93c', '#14b3a4']];
+const makeParasol = px((hue, u, dpr) => { const c = mkc(u, u * 1.7, dpr), g = c.getContext('2d'), lw = Math.max(1, u * .03), by = u * 1.62, top = u * .45, [a, b] = HUES[hue % 3];
+  g.fillStyle = 'rgba(80,60,30,.22)'; g.beginPath(); g.ellipse(u * .55, by - u * .04, u * .42, u * .1, 0, 0, Math.PI * 2); g.fill();
+  rr(g, u * .12, by - u * .2, u * .5, u * .16, u * .04); g.fillStyle = b; g.fill(); g.fillStyle = a; g.fillRect(u * .12, by - u * .14, u * .5, u * .05);
+  g.strokeStyle = '#6b4226'; g.lineWidth = u * .05; g.beginPath(); g.moveTo(u * .5, top); g.lineTo(u * .5, by - u * .05); g.stroke();
+  for (let k = 0; k < 6; k++) { const a0 = Math.PI + k * Math.PI / 6, a1 = a0 + Math.PI / 6; g.beginPath(); g.moveTo(u * .5, top - u * .02); g.arc(u * .5, top + u * .18, u * .46, a0, a1); g.closePath(); g.fillStyle = k % 2 ? a : b; g.fill(); g.lineWidth = lw; g.strokeStyle = OUT; g.stroke() }
+  g.beginPath(); g.arc(u * .5, top - u * .03, u * .05, 0, Math.PI * 2); g.fillStyle = a; g.fill(); g.stroke(); return c });
+const makeBoat = px((hue, u, dpr) => { const w = u * 2, c = mkc(w, u * 1.5, dpr), g = c.getContext('2d'), lw = Math.max(1, u * .035), wl = u * 1.25, [a] = HUES[hue % 3];
+  g.fillStyle = 'rgba(20,40,70,.25)'; g.beginPath(); g.ellipse(w / 2, wl + u * .05, u * .95, u * .12, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.moveTo(u * .05, wl - u * .42); g.lineTo(w - u * .02, wl - u * .5); g.quadraticCurveTo(w - u * .2, wl, w - u * .45, wl); g.lineTo(u * .3, wl); g.quadraticCurveTo(u * .12, wl - u * .1, u * .05, wl - u * .42); g.closePath();
+  g.fillStyle = '#f6f7fa'; g.fill(); g.lineWidth = lw; g.strokeStyle = OUT; g.stroke();
+  g.fillStyle = a; g.fillRect(u * .2, wl - u * .2, w - u * .55, u * .1); g.fillStyle = '#c8372d'; g.fillRect(u * .25, wl - u * .08, w - u * .75, u * .06);
+  rr(g, u * .55, wl - u * .95, u * .6, u * .5, u * .05); g.fillStyle = '#ffffff'; g.fill(); g.stroke(); rr(g, u * .63, wl - u * .85, u * .2, u * .16, u * .02); g.fillStyle = '#7cc6f0'; g.fill(); rr(g, u * .88, wl - u * .85, u * .2, u * .16, u * .02); g.fill();
+  g.strokeStyle = '#4a2e1f'; g.lineWidth = u * .04; g.beginPath(); g.moveTo(u * 1.45, wl - u * .5); g.lineTo(u * 1.45, wl - u * 1.35); g.stroke();
+  g.fillStyle = a; g.beginPath(); g.moveTo(u * 1.47, wl - u * 1.33); g.lineTo(u * 1.8, wl - u * 1.22); g.lineTo(u * 1.47, wl - u * 1.1); g.fill(); return c });
+const makeLighthouse = px((_, u, dpr) => { const c = mkc(u, u * 3.2, dpr), g = c.getContext('2d'), lw = Math.max(1, u * .035), by = u * 3.1, cx = u / 2;
+  g.fillStyle = 'rgba(20,40,70,.25)'; g.beginPath(); g.ellipse(cx, by - u * .04, u * .42, u * .1, 0, 0, Math.PI * 2); g.fill();
+  const tw = y => u * (.2 + .14 * (y - u * .9) / (by - u * .9));
+  g.save(); g.beginPath(); g.moveTo(cx - tw(u * .9), u * .9); g.lineTo(cx + tw(u * .9), u * .9); g.lineTo(cx + tw(by), by - u * .1); g.lineTo(cx - tw(by), by - u * .1); g.closePath(); g.fillStyle = '#ffffff'; g.fill(); g.clip();
+  g.fillStyle = '#c8372d'; for (let y = u * 1.2; y < by; y += u * .7) g.fillRect(0, y, u, u * .35); g.restore();
+  g.beginPath(); g.moveTo(cx - tw(u * .9), u * .9); g.lineTo(cx + tw(u * .9), u * .9); g.lineTo(cx + tw(by), by - u * .1); g.lineTo(cx - tw(by), by - u * .1); g.closePath(); g.lineWidth = lw; g.strokeStyle = OUT; g.stroke();
+  rr(g, cx - u * .3, u * .82, u * .6, u * .1, u * .03); g.fillStyle = '#2b2f36'; g.fill(); g.stroke();
+  rr(g, cx - u * .17, u * .4, u * .34, u * .42, u * .04); g.fillStyle = '#ffe58a'; g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(cx - u * .24, u * .42); g.lineTo(cx, u * .12); g.lineTo(cx + u * .24, u * .42); g.closePath(); g.fillStyle = '#c8372d'; g.fill(); g.stroke(); return c });
 const makeStepDust = px((_, u, dpr) => { const cv = mkc(u, u * .32, dpr), g = cv.getContext('2d');
   g.lineCap = 'round'; g.strokeStyle = 'rgba(92,77,57,.52)'; g.lineWidth = Math.max(1, u * .035);
   [[.2,.2,.12],[.42,.12,.09],[.68,.18,.13],[.82,.1,.07]].forEach(([x,y,r]) => { g.beginPath(); g.arc(x*u,y*u,r*u,Math.PI*1.05,Math.PI*1.85); g.stroke() }); return cv });
@@ -146,6 +188,9 @@ const OBJECTS = {
   sign(v, o) { const U = v.U, by = (o.y + 1) * U;
     v.sprite(keyOf(o, o => 'sign-' + o.what), makeSign, o.what === 'gym' ? cur.city.roof : '#14b3a4', o.x * U, by - 1.12 * U, U, 1.2 * U, by) },
   bridge(v, o) { const U = v.U, pad = U * .14; v.sprite('bridge', makeBridge, o, o.x * U - pad, o.y * U - pad, o.w * U + pad * 2, o.h * U + pad * 2, o.y * U - U) },
+  parasol(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('parasol-' + o.hue, makeParasol, o.hue, o.x * U, by - 1.62 * U, U, 1.7 * U, by) },
+  boat(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('boat-' + o.hue, makeBoat, o.hue, o.x * U, by - 1.35 * U + Math.sin(v.now / 700 + o.x) * U * .03, 2 * U, 1.5 * U, by) },
+  lighthouse(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('lighthouse', makeLighthouse, null, o.x * U, by - 3.1 * U, U, 3.2 * U, by) },
   arch(v, o) { const U = v.U, by = (o.y + 1) * U; v.sprite('arch', makeArch, null, o.x * U, by - 2.6 * U, 4 * U, 2.6 * U, by + U * .1) },
 };
 
@@ -166,6 +211,9 @@ export function describeMap(v, now, st) {
     if (Math.sin(ph) < .2) continue;
     const p = U / 16, sx = Math.round((x * U + U * .23 + Math.cos(ph) * U * .08) / p) * p;
     v.sprite('shimmer', makeShimmer, null, sx, y * U + U * .44, U * .34, U * .08, -1e9, 1, FX_NONE);
+    const waveFrame = Math.floor(now / 260 + x * .7 + y * .45) % 8;
+    const variant = (x + y) % 3;
+    v.sprite(`ocean-wave-${waveFrame}-${variant}`, makeOceanWave, { phase: (waveFrame + variant) / 8 }, x * U + U * .04, y * U + U * .16, U * .9, U * .58, -1e9, .9, FX_NONE);
   }
 
   for (const o of map.objs) { const f = OBJECTS[o.type]; if (f) f(v, o) }

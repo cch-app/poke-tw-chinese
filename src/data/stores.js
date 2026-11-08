@@ -6,4 +6,11 @@ export const STORE_BRANDS = [
   { id: 'ok', name: 'OK mart', sign: 'OK mart', primary: '#d9272e', secondary: '#245393', stripes: ['#245393', '#ffffff', '#d9272e'] },
 ];
 
-export const storeBrand = id => STORE_BRANDS.find(brand => brand.id === id) || STORE_BRANDS[0];
+// 不是連鎖店的雜貨店：老街的柑仔店、山上的小商店。只出現在分區和道路上，城裡還是連鎖超商。
+export const LOCAL_SHOPS = [
+  { id: 'kamtsa', name: '柑仔店', sign: '柑仔店', primary: '#a8432c', secondary: '#e8c873', stripes: ['#e8c873', '#a8432c', '#5b3525'] },
+  { id: 'grocer', name: '雜貨店', sign: '雜貨店', primary: '#2f6b4f', secondary: '#f0b43c', stripes: ['#f0b43c', '#ffffff', '#2f6b4f'] },
+  { id: 'fresh', name: '生鮮超市', sign: '生鮮超市', primary: '#1f6fb2', secondary: '#ff9f2e', stripes: ['#ff9f2e', '#ffffff', '#1f6fb2'] },
+];
+export const ALL_SHOPS = [...STORE_BRANDS, ...LOCAL_SHOPS];
+export const storeBrand = id => ALL_SHOPS.find(brand => brand.id === id) || STORE_BRANDS[0];

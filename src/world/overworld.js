@@ -14,7 +14,7 @@ import { closePanelQuiet } from '../ui/panel.js';
 import { playerLook, tdata, trainerLook } from './looks.js';
 import { describeMap, sceneFor } from './map-view.js';
 import { H, SIDE_GATE_Y, genInterior, genMap, isWalk } from './maps.js';
-import { DISTRICT_GATE_Y, genDistrict } from './districts.js';
+import { DISTRICT_GATE_Y, DISTRICT_PLACES, genDistrict, innerEdge } from './districts.js';
 import { PLACES, ROAD_X, ROUTE_H, genRoute, hasRoute, routeKm, zoneAt } from './routes.js';
 
 let mv=null,held=null,last=performance.now(),cut=null,bubble=null,stepsSince=0;
@@ -51,8 +51,9 @@ function update(now){const dt=Math.min(50,now-last);last=now;
   MAP.trainers.forEach(t=>{if(S.beaten[t.id]||cut)return;t.turnT-=dt;if(t.turnT<=0){t.turnT=1800+Math.random()*2600;t.dir=Math.random()<.5?t.home:pick(['up','down','left','right']);if(!mv)checkSight()}})}
  if(cut)cut(dt)}
 function tryMove(dir){S.dir=dir;const[dx,dy]=DIRS[dir];const nx=S.x+dx,ny=S.y+dy;
- if(MAP.kind==='town'&&ny===SIDE_GATE_Y&&(nx===0||nx===MAP.w-1)){held=null;enterDistrict(nx===0?'west':'east');return}
- if(MAP.kind==='district'&&(ny===DISTRICT_GATE_Y||ny===DISTRICT_GATE_Y+1)&&(nx<0||nx>=MAP.w)){held=null;leaveDistrict(nx<0?'west':'east');return}
+ if(MAP.kind==='town'&&(ny===SIDE_GATE_Y||ny===SIDE_GATE_Y+1)&&(nx<0||nx>=MAP.w)){held=null;enterDistrict(nx<0?'west':'east');return}
+ // 分區：靠城市那一邊回到城裡；另一邊只有接到鄰近城市的公路才走得出去
+ if(MAP.kind==='district'&&(ny===DISTRICT_GATE_Y||ny===DISTRICT_GATE_Y+1)&&(nx<0||nx>=MAP.w)){held=null;if(innerEdge(MAP,nx))leaveDistrict(MAP.side);else if(MAP.link)crossLink(MAP.link);return}
  if(ny<0||ny>=MAP.h){held=null;if(MAP.kind==='in'){if(ny>=MAP.h)leaveInterior();return}gate(ny<0?'top':'bottom');return}
  if(!isWalk(nx,ny))return;mv={fx:S.x,fy:S.y,tx:nx,ty:ny,t:0}}
 function onStep(){stepsSince++;const k=S.x+','+S.y;
@@ -76,6 +77,7 @@ export function interact(){if(mode!=='world'||mv)return;const[dx,dy]=DIRS[S.dir]
   if(S.beaten[t.id])dialog([d.lose],null,d.zh);else dialog([d.hi],()=>trainerBattle(t),d.zh);return}
  const o=MAP.objs.find(o=>o.x===fx&&o.y===fy);
  if(o&&o.type==='sign'&&o.what==='route'){routeSign(o.zone);return}
+ if(o&&o.type==='sign'&&MAP.kind==='district'){districtSign(o.what);return}
  if(o&&o.type==='sign'){if(o.what==='gym')dialog([[`${c.zh}語言道館・館主${c.leader}・${c.theme}`,`${c.en} Gym · Leader ${c.leader} · ${tr(c.role)}`,`${c.ja}ジム・ジムリーダー${c.leader}・${tr(c.role)}`],[`${UI.recLv[0]}：Lv ${cityLv(S.city)+2}`,`${UI.recLv[1]}: Lv ${cityLv(S.city)+2}`,`${UI.recLv[2]}：Lv ${cityLv(S.city)+2}`]],null,UI.sign[0]);
   else dialog([[`歡迎來到${c.zh}！`,`Welcome to ${c.en}!`,`${c.ja}へようこそ！`]],null,UI.sign[0]);return}
  if(MAP.g[fy]?.[fx]===GT.WA)dialog([['水很清，可以看到小魚。',"The water is clear; you can see little fish.","水が澄んでいて、小魚が見える。"]])}
@@ -90,13 +92,26 @@ function gate(side){const ci=S.city;
 function enterDistrict(side){
   const city=S.city;
   S.district={city,side};
-  setMap(genDistrict(city));
-  S.x=side==='west'?2:MAP.w-3;
-  S.y=DISTRICT_GATE_Y;
-  S.dir=side==='west'?'right':'left';
-  mv=null;held=null;showMap();save();closePanelQuiet();
-  toast([`${CITIES[city].zh}分區`,`${CITIES[city].en} district`,`${CITIES[city].ja}の地区`]);
+  setMap(genDistrict(city,side));
+  // 從城市那一邊進來，面向外面：往西走就一直在西邊
+  S.y=DISTRICT_GATE_Y+(S.y-SIDE_GATE_Y);  // 走在大路的哪一線，進來就在哪一線
+  S.x=side==='west'?MAP.w-2:1;
+  S.dir=side==='west'?'left':'right';
+  mv=null;held=null;showMap();save();closePanelQuiet();districtToast();
 }
+function districtToast(){const c=CITIES[S.city],p=DISTRICT_PLACES[MAP.place];toast([c.zh+p[0],`${c.en} ${p[1]}`,c.ja+p[2]])}
+/** 沿著公路走到鄰近城市：從這座城的分區走出去，到那座城面向這邊的分區 */
+function crossLink(link){const to=CITIES[link.to];
+ if(S.badges<link.to){dialog([[`這條${link.name[0]}通往${to.zh}，要先拿到更多徽章才能過去。`,`The ${link.name[1]} leads to ${to.en}. You need more badges first.`,`この${link.name[2]}は${to.ja}へ続いている。もっとバッジが必要だ。`]]);return}
+ if(MAP.kind==='in')setMap(TOWN);S.city=link.to;S.route=null;S.district={city:link.to,side:link.toSide};setMap(genDistrict(link.to,link.toSide));
+ S.x=link.toSide==='west'?1:MAP.w-2;S.y=DISTRICT_GATE_Y;S.dir=link.toSide==='west'?'right':'left';
+ mv=null;held=null;showMap();save();closePanelQuiet();showCityTag();hud();
+ toast([`經過${link.name[0]}，來到${to.zh}`,`Via the ${link.name[1]} to ${to.en}`,`${link.name[2]}を通って${to.ja}へ`])}
+function districtSign(what){const c=CITIES[S.city],p=DISTRICT_PLACES[MAP.place],back=MAP.side==='west'?['東','east','東']:['西','west','西'];
+ if(what==='link'){const l=MAP.link,to=CITIES[l.to];dialog([[`${l.name[0]}：往${to.zh}`,`${l.name[1]}: to ${to.en}`,`${l.name[2]}：${to.ja}方面`],[`往${back[0]}回${c.zh}。`,`${c.en} is back ${back[1]}.`,`${back[2]}へ戻ると${c.ja}。`]],null,UI.sign[0]);return}
+ if(what==='trail'){dialog([['登山步道：山路很陡，草叢裡有動物，小心走。',"Mountain trail: steep paths, and animals in the grass. Take care.","登山道：急な山道。草むらに動物がいるので気をつけて。"]],null,UI.sign[0]);return}
+ const view=MAP.place==='mountain'?['觀景台：可以看到整片山谷。',"Lookout: the whole valley below.","展望台：谷全体が見渡せる。"]:['從這裡可以看到海，前面已經沒有路了。',"From here you can see the sea. The land ends here.","ここから海が見える。この先に道はない。"];
+ dialog([[`這裡是${c.zh}${p[0]}。`,`This is the ${c.en} ${p[1]}.`,`ここは${c.ja}の${p[2]}。`],view],null,UI.sign[0])}
 
 /** Return to the same city's west/east district gate. */
 function leaveDistrict(side){
@@ -104,7 +119,7 @@ function leaveDistrict(side){
   S.district=null;
   setMap(genMap(city));
   S.x=side==='west'?1:MAP.w-2;
-  S.y=SIDE_GATE_Y;
+  S.y=SIDE_GATE_Y+Math.max(0,Math.min(1,S.y-DISTRICT_GATE_Y));
   S.dir=side==='west'?'right':'left';
   mv=null;held=null;showMap();save();showCityTag();
 }
@@ -114,10 +129,10 @@ function enterRoute(i,arrive){S.route={i};S.district=null;setMap(genRoute(i));
  if(arrive==='top'){S.x=ROAD_X;S.y=1;S.dir='down'}else{S.x=ROAD_X;S.y=ROUTE_H-2;S.dir='up'}
  MAP.here=zoneAt(MAP,S.y);mv=null;held=null;showMap();save();closePanelQuiet();showRouteTag();placeToast()}
 /** 在道路上昏倒：回到剛離開的城市 */
-export const onRoute=()=>!!MAP&&(MAP.kind==='route'||MAP.kind==='district'||(MAP.kind==='in'&&TOWN&&TOWN.kind==='route'));
+export const onRoute=()=>!!MAP&&(MAP.kind==='route'||MAP.kind==='district'||(MAP.kind==='in'&&TOWN&&(TOWN.kind==='route'||TOWN.kind==='district')));
 export function returnToCity(){S.route=null;S.district=null;setMap(genMap(S.city));showMap();showCityTag()}
 /** 道路要用的地圖：存檔在道路上時也用它重建 */
-export const worldMap=()=>S.route?genRoute(S.route.i):S.district?genDistrict(S.city):genMap(S.city);
+export const worldMap=()=>S.route?genRoute(S.route.i):S.district?genDistrict(S.city,S.district.side):genMap(S.city);
 function placeToast(){const p=PLACES[MAP.zones[MAP.here].key];toast(p)}
 function routeSign(z){const i=MAP.i,a=CITIES[i],b=CITIES[i+1],p=PLACES[MAP.zones[z].key],km=Math.max(1,Math.round(routeKm(i)*(1-z/MAP.zones.length)));
  dialog([[`這裡是${p[0]}。`,`This is the ${p[1]}.`,`ここは${p[2]}。`],[`往南到${b.zh}還有${km}公里，往北回${a.zh}。`,`${b.en} is ${km} km south; ${a.en} is back north.`,`南の${b.ja}まであと${km}キロ、北へ戻ると${a.ja}。`]],null,UI.sign[0])}

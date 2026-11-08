@@ -26,7 +26,7 @@ export function canvasRuby(c,text,cx,cy,size,color,stroke){const segs=segment(te
   x+=w});c.restore()}
 
 /* ---------- 地面 ---------- */
-export const GT={G:0,TG:1,PD:2,PB:3,WA:4,FL:5};
+export const GT={G:0,TG:1,PD:2,PB:3,WA:4,FL:5,SA:6,PR:7,RK:8};  // SA 沙灘、PR 碼頭木棧道、RK 山壁岩石（不能走）
 export function paintGround(m,ci,u,dpr){const H=m.length,W=m[0].length;const cv=document.createElement('canvas');cv.width=Math.ceil(W*u*dpr);cv.height=Math.ceil(H*u*dpr);
  const g=cv.getContext('2d');g.scale(dpr,dpr);const r=rng(ci*977+5);
  g.fillStyle='#8bd36b';g.fillRect(0,0,W*u,H*u);
@@ -119,7 +119,7 @@ export function spriteArch(u,dpr,city){const w=4*u,h=2.6*u;const cv=mkc(w,h,dpr)
 // 會冒煙／冒熱氣的出口（相對於建築貼圖左上角，單位是格）：木屋煙囪、茶壺壺嘴、咖啡杯口。
 // 煙是地圖畫面每格即時畫的，不畫在建築貼圖上，才會一直冒出來
 export const VENTS={inn:[{x:4.65,y:.8,kind:'smoke'}],tea:[{x:.34,y:1.62,kind:'steam'}],coffee:[{x:2.05,y:.95,kind:'steam'},{x:2.5,y:.9,kind:'steam'},{x:2.95,y:.95,kind:'steam'}]};
-export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:1},tea:{w:5,h:4,ex:1},coffee:{w:5,h:4,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8}};
+export const BLD={gym:{w:7,h:5,ex:1.3},inn:{w:6,h:5,ex:1.4},store:{w:5,h:4,ex:1},tea:{w:5,h:4,ex:1},coffee:{w:5,h:4,ex:1},temple:{w:6,h:4,ex:1.6},house:{w:3,h:4,ex:1.8},mall:{w:8,h:5,ex:1.3},dept:{w:6,h:5,ex:1.7}};
 // 每種建築一眼就認得：屋頂形狀、顏色和大招牌各不相同（地圖上找路靠的就是這些地標）
 function spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId){
  const b=BLD[kind];const w=b.w*u,h=(b.h+b.ex)*u;const cv=mkc(w,h,dpr);const c=cv.getContext('2d');const lw=Math.max(1.4,u*.04);
@@ -365,14 +365,14 @@ export function emblemImage(ci){const c=CITIES[ci];const e=(EMB[c.emblem]||'').r
 /* ---------- 室內 ---------- */
 export function paintInterior(M,u,dpr,city,emb){const w=M.w*u,h=M.h*u;const cv=document.createElement('canvas');cv.width=Math.ceil(w*dpr);cv.height=Math.ceil(h*dpr);const c=cv.getContext('2d');c.scale(dpr,dpr);
  const lw=Math.max(1.4,u*.04),k=M.bk,shop=storeBrand(M.brand);
- const FL={inn:['#d9a86c','#c8955a'],store:['#eef1f6','#dde3ec'],tea:['#c99a66','#b98a58'],coffee:['#d8b08a','#b77b4f'],temple:['#d8d0c0','#c6bca8'],gym:['#f4f6fb','#e3e8f2']}[k];
+ const FL={inn:['#d9a86c','#c8955a'],store:['#eef1f6','#dde3ec'],tea:['#c99a66','#b98a58'],coffee:['#d8b08a','#b77b4f'],temple:['#d8d0c0','#c6bca8'],gym:['#f4f6fb','#e3e8f2'],mall:['#f2f0ec','#e2ded6'],dept:['#efe6d6','#ddd0b8']}[k];
  c.fillStyle=FL[0];c.fillRect(0,0,w,h);
  if(k==='inn'||k==='tea'){const rr2=rng(7);for(let y=0;y<h;y+=u/3)for(let x=((y/(u/3))%2)*u*.7-u*1.4;x<w;x+=u*1.4){c.fillStyle=`rgba(${rr2()<.5?'255,255,255':'90,50,20'},${(rr2()*.08).toFixed(3)})`;c.fillRect(x,y,u*1.4,u/3)}c.strokeStyle=FL[1];c.lineWidth=2;for(let y=0;y<h;y+=u/3){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();for(let x=((y/(u/3))%2)*u*.7;x<w;x+=u*1.4){c.beginPath();c.moveTo(x,y);c.lineTo(x,y+u/3);c.stroke()}}}
  else for(let y=0;y<M.h;y++)for(let x=0;x<M.w;x++)if((x+y)%2){c.fillStyle=FL[1];c.fillRect(x*u,y*u,u,u)}
  if(k==='gym'){c.fillStyle=shade(city.roof,.1);c.fillRect(4.6*u,2*u,1.8*u,h-2*u);c.fillStyle='#ffd35a';c.fillRect(4.6*u,2*u,u*.08,h-2*u);c.fillRect(6.32*u,2*u,u*.08,h-2*u);
   for(let y=4;y<M.h;y+=2){c.fillStyle='rgba(255,255,255,.18)';c.fillRect(4.7*u,y*u,1.6*u,u*.12)}}
  if(k==='inn'||k==='temple'){rr(c,3*u,5.2*u,5*u,2.6*u,u*.3);fs(c,k==='inn'?'#e86a3a':'#c8372d',lw);rr(c,3.25*u,5.45*u,4.5*u,2.1*u,u*.2);c.strokeStyle='#ffd35a';c.lineWidth=u*.05;c.stroke()}
- const WALL={inn:'#f6e7c8',store:'#ffffff',tea:'#7a5236',coffee:'#5b3525',temple:'#b8312a',gym:shade(city.roof,.6)}[k];
+ const WALL={inn:'#f6e7c8',store:'#ffffff',tea:'#7a5236',coffee:'#5b3525',temple:'#b8312a',gym:shade(city.roof,.6),mall:'#f4f5f7',dept:'#f3ead8'}[k];
  c.fillStyle=WALL;c.fillRect(0,0,w,2*u);c.fillStyle=shade(WALL,-.25);c.fillRect(0,2*u-u*.16,w,u*.16);
  // 牆面裝飾
  if(k==='inn'){rr(c,1.3*u,.35*u,1.6*u,1.1*u,u*.06);fs(c,'#8c643c',lw);rr(c,1.42*u,.47*u,1.36*u,.86*u,u*.04);fs(c,'#bfe6ff',lw*.6);c.beginPath();c.moveTo(1.42*u,1.33*u);c.lineTo(2*u,.75*u);c.lineTo(2.4*u,1.05*u);c.lineTo(2.78*u,.85*u);c.lineTo(2.78*u,1.33*u);c.closePath();fs(c,'#5fae4c');
@@ -382,6 +382,11 @@ export function paintInterior(M,u,dpr,city,emb){const w=M.w*u,h=M.h*u;const cv=d
   rr(c,3.7*u,.05*u,3.6*u,.55*u,u*.1);fs(c,shop.primary,lw);c.fillStyle='#fff';c.font=`800 ${u*.25}px system-ui,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(shop.sign,5.5*u,.34*u)}
  if(k==='tea'){rr(c,1.2*u,.25*u,w-2.4*u,1.35*u,u*.1);fs(c,'#2a2d38',lw);const items=[['珍珠奶茶','60'],['紅茶','30'],['綠茶','30'],['冬瓜茶','35']];
   items.forEach(([n,p],i)=>{const x=(2+i*1.9)*u;canvasRuby(c,n,x+.6*u,1.25*u,u*.24,'#ffffff');c.fillStyle='#ffc93c';c.font=`800 ${u*.22}px sans-serif`;c.textAlign='center';c.fillText('$'+p,x+.6*u,1.52*u)})}
+ // 購物中心是美食街：一排店家招牌；百貨公司是專櫃：品牌燈箱和電梯
+ if(k==='mall'){const sc=['#ff5b4a','#ffc93c','#14b3a4','#7a8cff','#ff8fb6'];for(let i=0;i<5;i++){rr(c,(.7+i*2)*u,.3*u,1.6*u,.55*u,u*.06);fs(c,sc[i],lw*.7)}
+  rr(c,3.4*u,1*u,4.2*u,.7*u,u*.1);fs(c,'#2b2f36',lw);canvasRuby(c,'美食街',5.5*u,1.55*u,u*.3,'#ffffff')}
+ if(k==='dept'){[[.8],[8.2]].forEach(([x])=>{rr(c,x*u,.35*u,2*u,1.4*u,u*.05);fs(c,'#b9bfca',lw);c.fillStyle='#8f96a6';c.fillRect((x+.98)*u,.4*u,.04*u,1.3*u);circ(c,(x+1)*u,.22*u,u*.08);c.fillStyle='#ffd35a';c.fill()});
+  rr(c,3.4*u,.25*u,4.2*u,1.2*u,u*.08);fs(c,'#8a1f24',lw);rr(c,3.5*u,.35*u,4*u,1*u,u*.05);c.strokeStyle='#e8c873';c.lineWidth=u*.04;c.stroke();canvasRuby(c,'百貨公司',5.5*u,1.2*u,u*.32,'#e8c873')}
  if(k==='temple'){rr(c,3*u,.1*u,5*u,1.6*u,u*.08);fs(c,'#6b1a14',lw);rr(c,3.3*u,.3*u,4.4*u,1.3*u,u*.06);fs(c,lg(c,0,.3*u,0,1.6*u,['#ffd35a','#e0902b']),lw);
   for(let i=0;i<7;i++){c.strokeStyle='rgba(120,50,10,.35)';c.lineWidth=u*.03;c.beginPath();c.moveTo((3.5+i*.65)*u,.35*u);c.lineTo((3.5+i*.65)*u,1.55*u);c.stroke()}
   rr(c,4.4*u,.0*u,2.2*u,.55*u,u*.08);fs(c,'#1b2340',lw);canvasRuby(c,'平安',5.5*u,.48*u,u*.3,'#ffd35a');
@@ -399,7 +404,7 @@ export function paintInterior(M,u,dpr,city,emb){const w=M.w*u,h=M.h*u;const cv=d
 export const FEX={counter:.75,shelf:1.35,sofa:.6,plant:1.05,table:.55,chair:.5,burner:1.05,pillar:1.75,dispenser:1,rack:.85,cushion:.15};
 export function spriteFurn(f,k,u,dpr,city){const ex=FEX[f.t]||.5,fw=f.w*u,fh=f.h*u,H2=fh+ex*u;const cv=mkc(fw,H2,dpr),c=cv.getContext('2d');const lw=Math.max(1.3,u*.035);const y0=ex*u,yb=H2;
  const shadow=(x,w2)=>{ell(c,x+w2/2,yb-u*.08,w2*.5,u*.13);c.fillStyle='rgba(30,20,10,.22)';c.fill()};
- if(f.t==='counter'){const P={inn:['#c79a6a','#8a5a36','#6b4226'],store:['#e3e8f2','#f7f9fc','#14b3a4'],tea:['#f0d2a8','#d9a873','#a8743f'],coffee:['#c99a6a','#8a5a36','#5b3525'],temple:['#d8473a','#a3271f','#ffd35a']}[k];
+ if(f.t==='counter'){const P={inn:['#c79a6a','#8a5a36','#6b4226'],store:['#e3e8f2','#f7f9fc','#14b3a4'],tea:['#f0d2a8','#d9a873','#a8743f'],coffee:['#c99a6a','#8a5a36','#5b3525'],temple:['#d8473a','#a3271f','#ffd35a'],mall:['#e3e8f2','#f7f9fc','#ff8fb6'],dept:['#f3e3c3','#d9c29a','#8a1f24']}[k];
   c.fillStyle='rgba(30,20,10,.2)';c.fillRect(u*.1,yb-u*.12,fw,u*.14);
   rr(c,0,y0+u*.36,fw,fh-u*.36+u*.0,u*.06);fs(c,lg(c,0,y0,0,yb,[shade(P[1],.05),shade(P[1],-.18)]),lw);
   if(k==='temple'){rr(c,u*.15,y0+u*.42,fw-u*.3,fh-u*.6,u*.04);fs(c,'#c8372d',lw*.7);c.strokeStyle='#ffd35a';c.lineWidth=u*.04;rr(c,u*.25,y0+u*.5,fw-u*.5,fh-u*.78,u*.04);c.stroke();
@@ -567,8 +572,54 @@ function spriteSimpleShop(kind,u,dpr,city,brandId){
  return cv;
 }
 
+// 招牌：底板加上有標音的中文
+function rubyPlaque(c,u,cx,cy,text,bg,fg,sz,lw){const pw=text.length*sz*1.08+sz*.6,ph=sz*(settings().ruby==='off'?1.3:1.75);rr(c,cx-pw/2,cy-ph/2,pw,ph,u*.08);fs(c,bg,lw);canvasRuby(c,text,cx,cy+ph/2-sz*.32,sz,fg)}
+// 購物中心：寬大低矮的白色量體，中央玻璃圓頂中庭，一樓整排櫥窗和綠色雨遮，門口是三扇玻璃門
+function spriteMall(u,dpr){const b=BLD.mall,w=b.w*u,h=(b.h+b.ex)*u,cv=mkc(w,h,dpr),c=cv.getContext('2d'),lw=Math.max(1.4,u*.035),fy=h-b.h*u,dc=(Math.floor(b.w/2)+.5)*u;c.lineJoin='round';
+ c.fillStyle='rgba(20,30,40,.2)';c.fillRect(u*.2,h-u*.35,w-u*.3,u*.35);
+ c.beginPath();c.arc(dc,fy+u*.45,u*1.3,Math.PI,0);c.closePath();fs(c,lg(c,0,fy-u*.9,0,fy+u*.45,['#effaff','#9fcde8','#4f86b0']),lw);
+ c.strokeStyle='#e6eaf0';c.lineWidth=u*.05;for(let k=1;k<6;k++){const a=Math.PI+k*Math.PI/6;c.beginPath();c.moveTo(dc,fy+u*.45);c.lineTo(dc+Math.cos(a)*u*1.3,fy+u*.45+Math.sin(a)*u*1.3);c.stroke()}
+ c.beginPath();c.arc(dc,fy+u*.45,u*.75,Math.PI,0);c.stroke();
+ rr(c,u*.12,fy+u*.4,w-u*.24,h-fy-u*.4,u*.05);fs(c,lg(c,0,fy,0,h,['#fbfbfc','#dfe3e9']),lw);
+ rr(c,0,fy+u*.3,w,u*.62,u*.05);fs(c,'#2b2f36',lw);rubyPlaque(c,u,dc,fy+u*.61,'購物中心','#2b2f36','#ffffff',u*.3,0);
+ c.fillStyle='#ffd35a';c.font=`900 ${u*.2}px system-ui,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('MALL',w-u*.75,fy+u*.61);c.fillText('MALL',u*.75,fy+u*.61);
+ const gy=fy+u*1.15,gh=u*1.05;rr(c,u*.4,gy,w-u*.8,gh,u*.03);fs(c,lg(c,0,gy,0,gy+gh,['#e6f6ff','#8fc3e6','#3e78a8']),lw*.8);
+ c.strokeStyle='#cfd6e2';c.lineWidth=u*.05;for(let x=u*.9;x<w-u*.45;x+=u*.5){c.beginPath();c.moveTo(x,gy);c.lineTo(x,gy+gh);c.stroke()}
+ c.fillStyle='rgba(255,255,255,.35)';[u*.7,w-u*2.2].forEach(x=>{c.beginPath();c.moveTo(x,gy+gh);c.lineTo(x+u*.5,gy);c.lineTo(x+u*.75,gy);c.lineTo(x+u*.25,gy+gh);c.fill()});
+ const ay=h-u*2.05;rr(c,u*.05,ay,w-u*.1,u*.26,u*.05);fs(c,lg(c,0,ay,0,ay+u*.26,['#2fc4b2','#0e7c74']),lw);
+ const sc=['#ff5b4a','#ffc93c','#7a8cff','#ff8fb6','#8bd36b'];
+ [[u*.35,dc-u*1.0],[dc+u*1.0,w-u*.35]].forEach(([x0,x1],side)=>{const ty=ay+u*.4,tb=h-u*.32;rr(c,x0,ty,x1-x0,tb-ty,u*.03);fs(c,lg(c,0,ty,0,tb,['#f4fbff','#b4d8ec','#6c9fc2']),lw*.8);
+  for(let x=x0+u*.1,k=side*2;x<x1-u*.5;x+=u*.95,k++){rr(c,x,ty+u*.08,u*.8,u*.24,u*.03);fs(c,sc[k%5],lw*.4);c.strokeStyle='rgba(27,35,64,.25)';c.lineWidth=u*.04;c.beginPath();c.moveTo(x+u*.85,ty);c.lineTo(x+u*.85,tb);c.stroke()}
+  for(let k=0;k<4;k++){const x=x0+u*.25+k*(x1-x0-u*.5)/3;ell(c,x,tb-u*.35,u*.09,u*.09);c.fillStyle=sc[(k+side)%5];c.fill();c.fillRect(x-u*.07,tb-u*.28,u*.14,u*.22)}});
+ const dw=u*1.9,dh=u*1.45,dx=dc-dw/2;rr(c,dx-u*.08,h-dh-u*.08,dw+u*.16,dh+u*.08,u*.04);fs(c,'#2b2f36',lw);
+ for(let k=0;k<3;k++){rr(c,dx+k*dw/3+u*.05,h-dh+u*.02,dw/3-u*.1,dh-u*.06,u*.02);fs(c,lg(c,0,h-dh,0,h,['#effaff','#9fcde8']))}
+ c.fillStyle='#c9ced6';[dc-u*.12,dc+u*.08].forEach(x=>c.fillRect(x,h-dh*.6,u*.04,u*.32));
+ [u*.15,w-u*.6].forEach(px=>{rr(c,px,h-u*.36,u*.45,u*.34,u*.05);fs(c,'#9aa3b6',lw*.6);circ(c,px+u*.22,h-u*.5,u*.22);fs(c,lg(c,0,h-u*.72,0,h-u*.3,['#6cc46f','#2f7a3a']),lw*.6)});
+ return cv}
+// 百貨公司：米色石材立面、頂上紅底金字的大招牌，三層整齊的窗，兩側直式布條，一樓是條紋雨遮、櫥窗和旋轉門
+function spriteDept(u,dpr){const b=BLD.dept,w=b.w*u,h=(b.h+b.ex)*u,cv=mkc(w,h,dpr),c=cv.getContext('2d'),lw=Math.max(1.4,u*.035),fy=h-b.h*u-u*.3,dc=(Math.floor(b.w/2)+.5)*u,gold='#e8c873',red='#8a1f24';c.lineJoin='round';
+ c.fillStyle='rgba(20,30,40,.2)';c.fillRect(u*.2,h-u*.35,w-u*.3,u*.35);
+ rr(c,w/2-u*1.7,fy-u*1.2,u*3.4,u*.95,u*.06);fs(c,red,lw);rr(c,w/2-u*1.6,fy-u*1.1,u*3.2,u*.75,u*.04);c.strokeStyle=gold;c.lineWidth=u*.04;c.stroke();
+ canvasRuby(c,'百貨公司',w/2,fy-u*.48,u*.3,gold);c.fillStyle='#5b6178';[w/2-u*1.2,w/2+u*1.1].forEach(x=>c.fillRect(x,fy-u*.25,u*.1,u*.3));
+ rr(c,u*.15,fy,w-u*.3,h-fy,u*.04);fs(c,lg(c,0,fy,0,h,['#f6efe2','#e2d6c0']),lw);
+ rr(c,0,fy-u*.08,w,u*.3,u*.04);fs(c,'#cdbb98',lw);c.fillStyle='rgba(0,0,0,.12)';c.fillRect(u*.1,fy+u*.2,w-u*.2,u*.06);
+ for(let f2=0;f2<3;f2++)for(let k=0;k<4;k++){const x=u*1.0+k*(w-u*2.0)/4+u*.08,y=fy+u*.42+f2*u*.85,ww=(w-u*2.0)/4-u*.16;
+  rr(c,x,y,ww,u*.6,u*.03);fs(c,'#5a4a3a',lw*.6);rr(c,x+u*.05,y+u*.05,ww-u*.1,u*.5,u*.02);fs(c,lg(c,0,y,0,y+u*.6,f2===1&&k%2?['#fff1cf','#e8b86a']:['#dff1fb','#7fb0cf']));
+  rr(c,x-u*.04,y+u*.6,ww+u*.08,u*.06,u*.02);fs(c,'#cdbb98',lw*.4)}
+ [u*.3,w-u*.72].forEach(x=>{rr(c,x,fy+u*.4,u*.42,u*2.4,u*.04);fs(c,lg(c,x,0,x+u*.42,0,['#d8473a','#a3271f']),lw*.8);c.fillStyle=gold;c.font=`900 ${u*.28}px "Noto Serif TC",serif`;c.textAlign='center';c.textBaseline='middle';
+  ['週','年','慶'].forEach((ch,i)=>c.fillText(ch,x+u*.21,fy+u*(.8+i*.7)))});
+ const ay=h-u*1.75;for(let k=0;k<12;k++){const x0=u*.1+k*(w-u*.2)/12,x1=x0+(w-u*.2)/12;c.beginPath();c.moveTo(x0,ay);c.lineTo(x1,ay);c.lineTo(x1,ay+u*.22);c.arc((x0+x1)/2,ay+u*.22,(x1-x0)/2,0,Math.PI);c.closePath();fs(c,k%2?'#fff6e0':red,lw*.6)}
+ [[u*.35,dc-u*.75],[dc+u*.75,w-u*.35]].forEach(([x0,x1],side)=>{const ty=ay+u*.55,tb=h-u*.3;rr(c,x0,ty,x1-x0,tb-ty,u*.03);fs(c,lg(c,0,ty,0,tb,['#fff8ea','#f0dcb8']),lw*.8);
+  for(let k=0;k<2;k++){const mx=x0+(x1-x0)*(.3+k*.4),col=['#7a8cff','#ff8fb6','#14b3a4','#ffc93c'][side*2+k];circ(c,mx,ty+u*.2,u*.09);fs(c,'#e6e0d6',lw*.4);c.beginPath();c.moveTo(mx-u*.15,ty+u*.32);c.lineTo(mx+u*.15,ty+u*.32);c.lineTo(mx+u*.2,tb-u*.12);c.lineTo(mx-u*.2,tb-u*.12);c.closePath();fs(c,col,lw*.4)}});
+ const dw=u*1.3,dh=u*1.3,dx=dc-dw/2;rr(c,dx-u*.08,h-dh-u*.08,dw+u*.16,dh+u*.08,u*.04);fs(c,'#b08a3a',lw);rr(c,dx,h-dh,dw,dh,u*.02);fs(c,lg(c,0,h-dh,0,h,['#effaff','#a9cde0']));
+ c.strokeStyle='#b08a3a';c.lineWidth=u*.05;c.beginPath();c.moveTo(dc,h-dh);c.lineTo(dc,h);c.moveTo(dx+u*.15,h-dh*.5);c.lineTo(dx+dw-u*.15,h-dh*.5);c.stroke();
+ rr(c,u*.1,h-u*.22,w-u*.2,u*.2,u*.03);fs(c,'#cdbb98',lw*.6);
+ return cv}
+
 export function spriteBuilding(kind,u,dpr,city,emblemImg,brandId){
  if(kind==='store'||kind==='tea'||kind==='coffee')return spriteSimpleShop(kind,u,dpr,city,brandId);
+ if(kind==='mall')return spriteMall(u,dpr);
+ if(kind==='dept')return spriteDept(u,dpr);
  return spriteBuildingLegacy(kind,u,dpr,city,emblemImg,brandId);
 }
 

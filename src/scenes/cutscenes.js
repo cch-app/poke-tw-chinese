@@ -79,9 +79,16 @@ function mapScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,w,h,['#1f6fbf','#4aa8ea']);
  if(p<.4){g.save();g.globalAlpha=1-p/.4;cloudsAerial(g,w,h,cl.slice(7),.4+p*2,true);g.restore()}}
 // 降落：沿下滑道直線進場（機頭微仰、起落架與襟翼放下、落地燈亮），接近地面時拉平（flare）減緩下沉，
 // 主輪先著地冒出輪胎煙、擾流板升起，接著機頭放下讓鼻輪著地，最後減速滑行停下
+function airportMountains(g,w,h,t){
+  const layers=[{base:.62,color:'#a9c5c2',alpha:.72,seed:0},{base:.68,color:'#789b9b',alpha:.86,seed:1},{base:.73,color:'#4d6f73',alpha:.94,seed:2}];
+  layers.forEach(layer=>{g.save();g.globalAlpha=layer.alpha;g.fillStyle=layer.color;g.beginPath();g.moveTo(0,h);const step=w/14;
+    for(let x=0;x<=w+step;x+=step){const peak=h*(layer.base-.08-Math.abs(Math.sin(x*.0031+layer.seed*1.7+t*.00008))*.07);const shoulder=h*(layer.base-.01-Math.abs(Math.sin(x*.0062+layer.seed))*.035);g.lineTo(x-step*.24,shoulder);g.lineTo(x,peak);g.lineTo(x+step*.28,shoulder)}
+    g.lineTo(w,h);g.closePath();g.fill();g.restore()});
+  g.strokeStyle='rgba(235,247,242,.32)';g.lineWidth=Math.max(1,h*.006);g.beginPath();for(let x=0;x<=w;x+=w/18)g.lineTo(x,h*(.57-Math.abs(Math.sin(x*.003+t*.00006))*.045));g.stroke();
+}
 function landScene(g,w,h,p,cl,t){g.fillStyle=lg(g,0,0,0,h,['#7cc6ff','#cfeeff','#ffe9c7']);g.fillRect(0,0,w,h);
  circ(g,w*.82,h*.2,Math.min(w,h)*.07);g.fillStyle='#fff3b0';g.fill();cloudsDraw(g,w,h,cl,t/1000,.45);
- [['#a9d9a0',.62,.07],['#7fbf6a',.68,.05]].forEach(([col,base,amp],i)=>{g.fillStyle=col;g.beginPath();g.moveTo(0,h);for(let x=0;x<=w;x+=w/12)g.lineTo(x,h*base-Math.abs(Math.sin(x*.006+i*2))*h*amp*2);g.lineTo(w,h);g.fill()});
+ airportMountains(g,w,h,t);
  const gy=h*.72,ry=h*.82;g.fillStyle='#8bd36b';g.fillRect(0,gy,w,h-gy);
  // 現代航廈：整面玻璃帷幕加波浪形白色屋頂，旁邊是細長的錐形塔台
  const bx=w*.55,bw=Math.min(w*.42,520),bh=Math.min(h*.12,bw*.35);

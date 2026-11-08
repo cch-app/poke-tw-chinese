@@ -10,14 +10,14 @@ import { geographyFor } from './geography.js';
 
 const W=24;
 export const H=34;
-export const SIDE_GATE_Y=17;
+export const SIDE_GATE_Y=13;  // 第二條街（13–14 列）兩端直接通出城，跟分區的兩格寬大路接在一起
 /*
  * 城鎮配置：每座城鎮都用同一套整齊的格子。
  *   y 0      北邊地理邊界，只在大路（x 11–12）留入口；y 1 是牌樓
  *   y 2–6    道館、旅館        y 7–8   第一條街（門口都面向街道）
  *   y 9–12   超商、茶店、廟、民宅（超商、茶店、咖啡店同為 5×4）  y 13–14 第二條街
  *   y 15–32  南邊：小巷與空地、各城特色區、草叢（遇敵），大路一直通到南邊出口
- * 東西兩側在 SIDE_GATE_Y 提供分區轉場，邊界材質由城市地理位置決定。
+ * 東西兩側的第二條街一路通出城（SIDE_GATE_Y 起兩列），走出去就是那一側的分區；邊界材質由城市地理位置決定。
  * 城市之間的差別放在南邊：第二家超商、民宅、特色區、池塘、樹和草叢的位置。
  */
 const AVENUE=[11,12],STREETS=[7,8,13,14],LANE=20;
@@ -62,13 +62,13 @@ export function genMap(ci){const r=rng(ci*7919+13),city=CITIES[ci];const g=Array
  if(area==='park'){fillRect(15,22,7,4,GT.FL);[16,18,20].forEach(x=>{keep[24][x]=false;solid({type:'tree',x,y:24,kind:city.tree});keep[24][x]=true})}
  if(area==='rice'){fillRect(2,22,7,4,GT.TG);fillRect(15,23,7,4,GT.TG)}
 // 城市邊界跟著台灣地理：西部城市左側是海岸、右側是山；
-// 花東／北部城市則反過來。邊界本身不可通行，但入口保留一格沙灘或山徑，
-// 讓地區之間的轉場看起來像真正接在世界地圖上，而不是一圈通用樹牆。
+// 花東／北部城市則反過來。海岸那一側是沙地上的防風椰子樹（海在外面的分區裡），
+// 山那一側是松樹；入口保留一格小路，走出去就是那一側的分區。
 const geography=geographyFor(city);
 const paintBoundary=(side,x,terrain,gateY=null)=>{
   for(let y=0;y<H;y++){
-    if(gateY===y){g[y][x]=GT.PD;keep[y][x]=true;continue}
-    if(terrain==='coast'){g[y][x]=GT.WA;block(x,y);}
+    if(y===gateY||y===gateY+1){pave(x,y);continue}
+    if(terrain==='coast'){g[y][x]=GT.SA;solid({type:'tree',x,y,kind:'palm'})}
     else solid({type:'tree',x,y,kind:terrain==='mountain'?'pine':city.tree});
   }
 };
@@ -81,10 +81,10 @@ for(let x=1;x<W-1;x++){
 }
 // Explicit west/east district transition points. The inner tile is reserved
 // so scenery generation can never seal the doorway.
-for(const x of [1,W-2]){
-  blocked[SIDE_GATE_Y][x]=false;
-  for(let i=objs.length-1;i>=0;i--)if(objs[i].x===x&&objs[i].y===SIDE_GATE_Y)objs.splice(i,1);
-  pave(x,SIDE_GATE_Y,GT.PD);g[SIDE_GATE_Y][x-1]=GT.PD;g[SIDE_GATE_Y][x+1]=GT.PD;
+for(const x of [0,1,W-2,W-1])for(const y of [SIDE_GATE_Y,SIDE_GATE_Y+1]){
+  blocked[y][x]=false;
+  for(let i=objs.length-1;i>=0;i--)if(objs[i].x===x&&objs[i].y===y)objs.splice(i,1);
+  pave(x,y);
 }
  // 街邊花圃
  for(let i=0;i<14;i++){const x=1+Math.floor(r()*22),y=15+Math.floor(r()*2);if(free(x,y))g[y][x]=GT.FL}
@@ -125,6 +125,8 @@ export function genInterior(kind,ci,ret,brand=null){const gym=kind==='gym',w=11,
    [[2,6],[8,6]].forEach(([x,y])=>{add('table',x,y);add('chair',x,y-1);add('chair',x,y+1)});
    add('plant',1,3);add('plant',9,3)
   }
+  if(kind==='mall'){[[2,6],[8,6]].forEach(([x,y])=>{add('table',x,y);add('chair',x,y-1);add('chair',x,y+1)});add('plant',1,3);add('plant',9,3)}
+  if(kind==='dept'){add('rack',1,5);add('rack',1,7);add('rack',9,5);add('rack',9,7);add('shelf',7,5,1,1);add('shelf',3,5,1,1);add('plant',1,3);add('plant',9,3)}
   if(kind==='temple'){add('burner',5,6);add('pillar',1,4);add('pillar',9,4);add('pillar',1,7);add('pillar',9,7);add('cushion',3,4);add('cushion',7,4)}
   const free=[];for(let y=4;y<h-1;y++)for(let x=1;x<w-1;x++)if(!blocked[y][x]&&!(x===5&&y>=h-2))free.push([x,y]);
   const R2=Math.random;for(let k=0;k<2+(R2()<.5?1:0);k++){const[x,y]=free.splice(Math.floor(R2()*free.length),1)[0];const d=pick(TRAINERS);

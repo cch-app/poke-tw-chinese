@@ -6,7 +6,7 @@ import { BLD, GT, rng } from '../art.js';
 import { cityLv } from '../content.js';
 import { shuffle } from '../core/util.js';
 import { CITIES, TRAINERS } from '../data/index.js';
-import { STORE_BRANDS } from '../data/stores.js';
+import { ALL_SHOPS } from '../data/stores.js';
 import { geographyFor } from './geography.js';
 
 const W = 24, ZH = 14, ZONES = 4;
@@ -89,7 +89,7 @@ export function genRoute(i) {
     }
     if (key === 'rest') {
       // 公路休息站：一家超商、一間民宅，門口前面鋪好連到小路
-      const left = xa >= 9, bx = left ? xa - 7 : xa + 4, brand = STORE_BRANDS[Math.floor(r() * STORE_BRANDS.length)].id;
+      const left = xa >= 9, bx = left ? xa - 7 : xa + 4, brand = ALL_SHOPS[Math.floor(r() * ALL_SHOPS.length)].id;
       const st = building('store', bx, y0 + 1, brand);
       for (let x = Math.min(st.door[0], xa); x <= Math.max(st.door[0], xa + 1); x++) pave(x, y0 + 5);
       const hx = left ? xa + 3 : xa - 4;
