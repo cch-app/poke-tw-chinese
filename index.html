@@ -13,21 +13,14 @@
 <link rel="manifest" href="/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="/assets/style.ebfa3b42db.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=DotGothic16&display=swap">
 </head>
 <body>
 <div class="app" id="app">
   <canvas id="map" aria-label="遊戲地圖 Game map"></canvas>
   <div class="hud" id="hud" hidden>
-    <div class="card me">
-      <div class="nm"><span id="hName"></span><span class="lv" id="hLv">Lv 1</span></div>
-      <span class="lbl" id="hFatL"></span><div class="bar st" id="hFatBar"><i id="hFat"></i></div>
-      <span class="num" id="hFatN"></span>
-      <span class="lbl">EXP</span><div class="bar xp"><i id="hXp"></i></div>
-    </div>
     <div class="side">
-      <div class="card pill"><span id="hMoney">NT$0</span><span id="hBadge">★0</span></div>
+      <div class="worldStatus" id="clock" role="timer"></div>
       <div class="btnrow"><button class="hbtn" id="rubyBtn"></button><button class="hbtn go" id="menuBtn"></button></div>
     </div>
   </div>
@@ -35,13 +28,13 @@
   <div class="card dlg" id="dlg" hidden role="status"></div>
   <div class="keys" id="keys">←↑↓→ / WASD · Z / Enter = A · X / Esc = B</div>
   <div class="pad" id="pad">
-    <div class="dpad"><button class="u" data-dir="up" aria-label="up">▲</button><button class="l" data-dir="left" aria-label="left">◀</button><button class="r" data-dir="right" aria-label="right">▶</button><button class="d" data-dir="down" aria-label="down">▼</button></div>
+    <div class="dpad"><button class="u" data-dir="up" aria-label="up"></button><button class="l" data-dir="left" aria-label="left"></button><button class="r" data-dir="right" aria-label="right"></button><button class="d" data-dir="down" aria-label="down"></button><i class="hub"></i></div>
     <div class="abs"><button class="b" id="bBtn" aria-label="B">B</button><button class="a" id="aBtn" aria-label="A">A</button></div>
   </div>
 </div>
 <div class="ov" id="ov" hidden><div class="panel" id="panel"></div></div>
 <div class="toast" id="toast" hidden></div>
 <noscript><p style="padding:24px;font-family:sans-serif">這個遊戲需要開啟 JavaScript。Please enable JavaScript to play.</p></noscript>
-<script src="/assets/app.c1c4cd117c.js"></script>
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>
