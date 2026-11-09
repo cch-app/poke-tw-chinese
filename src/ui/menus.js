@@ -7,7 +7,7 @@ import { ANIMALS, CITIES, LEAGUE, TW_PEAKS, TW_PTS, TW_RANGES, UI } from '../dat
 import { LI, T, Z, itemTr, rb, tr } from '../i18n.js';
 import { mode } from '../scene.js';
 import { bootBackdrop, titleScreen } from '../scenes/title.js';
-import { speak, twVoices } from '../speech.js';
+import { speak, voices } from '../speech.js';
 import { S, clearSave, has, maxFat, petName, petNeed, save, xpNeed } from '../state.js';
 import { refreshView, travel } from '../world/overworld.js';
 import { choice, say } from './dialog.js';
@@ -59,7 +59,7 @@ function badgeMenu(){openPanel(head('badges',backBtn())+`<div class="pbody"><div
 function dexMenu(){const n=Object.keys(S.seen).length;openPanel(head('dex',backBtn())+`<div class="pbody"><div class="note">${n}/${ALLV.length} ${T('words')} · ${esc(tr(['',"Words you meet in battle are recorded here (correct / seen).","バトルで出会った単語がここに記録されます（正解数／出会った数）。"]))}</div>
  <div class="dex">${ALLV.map(v=>{const s=S.seen[v.w];return s?`<div>${rb(v.w)}<small>${esc(itemTr(v))} · ${s.ok}/${s.n}</small></div>`:`<div class="unk">？？？<small>&nbsp;</small></div>`}).join('')}</div></div>`);wireBack()}
 function settingsMenu(){const st=S.settings;
- const vs=twVoices.map(v=>`<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.voice?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('');
+ const vs=voices().map(v=>`<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.voice?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('');
  openPanel(head('settings',backBtn())+`<div class="pbody">
  <div class="field"><span class="flbl">${Z('ruby')} <span class="tl">${T('ruby')}</span></span><span class="seg">${['pinyin','zhuyin','off'].map(k=>`<button data-ruby="${k}" aria-pressed="${st.ruby===k}">${Z(k)}</button>`).join('')}</span></div>
  <div class="field"><span class="flbl">${Z('lang')} <span class="tl">${T('lang')}</span></span><span class="seg"><button data-lang="en" aria-pressed="${st.lang==='en'}">English</button><button data-lang="ja" aria-pressed="${st.lang==='ja'}">日本語</button></span></div>

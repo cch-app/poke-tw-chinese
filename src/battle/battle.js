@@ -22,7 +22,8 @@ export function startBattle(foe){B={foe,cut:has('cat')?1+Math.floor((petLv('cat'
   <div class="pbody" id="bbody"></div>`,'battle');
  requestAnimationFrame(drawArena);segs();fatBar()}
 // 對戰場景用一般的顏色畫，再交給 renderPixel 收成掌機四色（每 3 個 CSS 像素一點）
-function drawArena(){const c=$('#arenaCv');if(!c||!B)return;renderPixel(c,c.clientWidth,c.clientHeight,Math.min(2,window.devicePixelRatio||1),3,arenaScene)}
+function drawArena(){const c=$('#arenaCv');if(!c||!B||!c.clientWidth||!c.clientHeight)return;  // 寬度 0 時畫山的迴圈（x+=w/8）會永遠跑不完
+ renderPixel(c,c.clientWidth,c.clientHeight,Math.min(2,window.devicePixelRatio||1),3,arenaScene)}
 function arenaScene(g,w,h){
  const city=CITIES[S.city];g.fillStyle=lg(g,0,0,0,h,['#7cc6f0','#e6eaf2']);g.fillRect(0,0,w,h);
  g.fillStyle=shade(city.roof,.55);g.beginPath();g.moveTo(0,h*.55);for(let x=0;x<=w;x+=w/8)g.lineTo(x,h*.42+Math.sin(x*.02)*h*.06);g.lineTo(w,h);g.lineTo(0,h);g.fill();
