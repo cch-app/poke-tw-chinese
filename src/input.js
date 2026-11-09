@@ -26,9 +26,14 @@ export function initInput(){
  if(['z','Z',' ','Enter'].includes(e.key)&&(mode==='world'||mode==='dialog')){e.preventDefault();pressA();return}
  if(['x','X','Escape','Backspace'].includes(e.key)&&mode!=='title'){e.preventDefault();pressB()}});
 document.addEventListener('keyup',e=>{if(KEYDIR[e.key])release(KEYDIR[e.key])});
-document.querySelectorAll('.dpad [data-dir]').forEach(b=>{const d=b.dataset.dir;
- b.addEventListener('pointerdown',e=>{e.preventDefault();hold(d);try{b.setPointerCapture(e.pointerId)}catch(_){}});
- ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>release(d)))});
+// 方向盤：整個圓都能按，依手指相對圓心的角度決定方向；按著滑到別的方向就直接轉彎，中間一小圈不動
+{const dp=$('.dpad'),keyOf=d=>dp.querySelector(`[data-dir="${d}"]`);let cur=null,pid=null;
+ const dirAt=e=>{const r=dp.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;
+  if(Math.hypot(x,y)<r.width*.11)return null;return Math.abs(x)>Math.abs(y)?(x<0?'left':'right'):(y<0?'up':'down')};
+ const set=d=>{if(d===cur)return;if(cur){release(cur);keyOf(cur).classList.remove('on')}cur=d;if(d){hold(d);keyOf(d).classList.add('on')}};
+ dp.addEventListener('pointerdown',e=>{e.preventDefault();pid=e.pointerId;try{dp.setPointerCapture(pid)}catch(_){}set(dirAt(e))});
+ dp.addEventListener('pointermove',e=>{if(e.pointerId===pid)set(dirAt(e))});
+ ['pointerup','pointercancel','lostpointercapture'].forEach(t=>dp.addEventListener(t,e=>{if(e.pointerId===pid){pid=null;set(null)}}))}
 $('#aBtn').addEventListener('click',pressA);$('#bBtn').addEventListener('click',pressB);
 $('#menuBtn').addEventListener('click',()=>{if(mode==='world')mainMenu();else if(mode==='menu')closePanel();else if(mode==='choice'&&CH)CH.cancel()});
 $('#rubyBtn').addEventListener('click',()=>{if(!S)return;const o=['pinyin','zhuyin','off'];S.settings.ruby=o[(o.indexOf(S.settings.ruby)+1)%3];save();refreshView();hud();toast(UI[S.settings.ruby])})}
