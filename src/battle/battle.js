@@ -6,7 +6,7 @@ import { ANIMALS, CITIES } from '../data/index.js';
 import { T, Z, rb, tr } from '../i18n.js';
 import { dmgFor, gainMoney, gainXP, markSeen, xpFor } from '../progress.js';
 import { makeQ } from '../quiz.js';
-import { hush, speak, ttsOK } from '../speech.js';
+import { canAutoPlay, hush, speak, speechAvailable, ttsOK } from '../speech.js';
 import { MAP, S, TOWN, has, innFee, maxFat, petLv, save, setMap } from '../state.js';
 import { hud } from '../ui/hud.js';
 import { btn, openPanel } from '../ui/panel.js';
@@ -36,20 +36,21 @@ function arenaScene(g,w,h){
 export function segs(){const el=$('#foeSeg');if(!el)return;if(B.love!=null){el.style.cssText='display:grid;grid-template-columns:auto 1fr;gap:3px 6px;align-items:center';el.innerHTML=`<span class="lbl">${Z('affection')}</span><span class="segs" style="margin:0">${Array.from({length:3},(_,i)=>`<i class="${i<B.love?'love':'empty'}"></i>`).join('')}</span><span class="lbl">${Z('fatigue')}</span><span class="segs" style="margin:0">${Array.from({length:B.total},(_,i)=>`<i class="${i<B.hits?'gone':''}"></i>`).join('')}</span>`;return}
  el.innerHTML=Array.from({length:B.total},(_,i)=>`<i class="${i<B.hits?'gone':''}"></i>`).join('')}
 function fatBar(){const f=S.fat/maxFat();const b=$('#bFat');if(b){b.style.width=Math.round(100*f)+'%';$('#bFatBar').classList.toggle('low',f<.25);$('#bFatBar').classList.toggle('mid',f>=.25&&f<.5);$('#bFatN').textContent=`${S.fat}/${maxFat()}`}hud()}
-export function askQ(q,next,onAnswer){const body=$('#bbody');const listen=!!q.audio,can=ttsOK();
+export function askQ(q,next,onAnswer){const body=$('#bbody');const listen=!!q.audio,can=ttsOK(),canSpeak=speechAvailable();
  let h=`<div class="q">`;
  if(q.passage)h+=`<div class="passage">${rb(q.passage)}</div>`;
  h+=`<div class="qlabel">${Z(q.label)}<span class="tl">${T(q.label)}</span></div>`;
  if(q.qzh)h+=`<div class="qprompt sm">${rb(q.qzh)}</div>`;
  if(q.zh)h+=`<div class="qprompt">${rb(q.zh)}</div>`;
  if(q.tl)h+=`<div class="qprompt tlp">${esc(q.tl)}</div>`;
- if(listen){if(can)h+=`<div class="row"><button class="play" id="playBtn" data-autofocus>▶ ${Z('play')}<span class="tl">${T('play')}</span></button>${has('bird')?`<button class="play" id="slowBtn" style="background:var(--ink)">▶ ${Z('slow')}<span class="tl">${T('slow')}</span></button>`:''}</div>`;
-  else h+=`<div class="note">${Z('noVoice')}<br>${T('noVoice')}</div>${q.hideText?'':`<div class="qprompt sm">${rb(q.audio)}</div>`}`}
+ if(listen){if(can||canSpeak)h+=`<div class="row"><button class="play" id="playBtn" data-autofocus>▶ ${Z('play')}<span class="tl">${T('play')}</span></button>${has('bird')?`<button class="play" id="slowBtn" style="background:var(--ink)">▶ ${Z('slow')}<span class="tl">${T('slow')}</span></button>`:''}</div>`;
+  if(!can)h+=`<div class="note">${Z('noVoice')}<br>${T('noVoice')}</div>`;
+  if(!q.hideText||!can)h+=`<div class="qprompt sm">${rb(q.audio)}</div>`}
  h+=`<div class="opts">${q.opts.map((o,i)=>`<button class="opt ${q.optZh?'':'tlo'}" data-i="${i}"><span class="k">${i+1}</span><span>${q.optZh?rb(o):esc(o)}</span></button>`).join('')}</div>`;
  if(B.cut)h+=`<div class="row"><button class="btn alt" id="cutBtn">🐾 ${rb('貓的直覺')}<span class="tl">${esc(tr(['',ANIMALS[0].ab[0],ANIMALS[0].ab[1]]))}</span></button></div>`;
  h+=`<div class="fb" id="fb"></div></div>`;body.innerHTML=h;
  if(listen&&!can&&q.hideText){/* 沒有臺灣語音時，選項本身就是文字，改用意思題 */}
- const pb=$('#playBtn');if(pb){pb.onclick=()=>speak(q.audio);setTimeout(()=>speak(q.audio),400)}
+ const pb=$('#playBtn');if(pb){pb.onclick=()=>speak(q.audio);setTimeout(()=>{if(canAutoPlay()&&$('#playBtn')===pb)speak(q.audio)},400)}
  const sb=$('#slowBtn');if(sb)sb.onclick=()=>speak(q.audio,.6);
  const cb=$('#cutBtn');if(cb)cb.onclick=()=>{const wr=[...body.querySelectorAll('.opt')].filter(b=>+b.dataset.i!==q.ci&&!b.disabled);if(wr.length){const w=pick(wr);w.classList.add('cut');w.disabled=true}B.cut--;if(B.cut<=0)cb.remove()};
  let done=false;
